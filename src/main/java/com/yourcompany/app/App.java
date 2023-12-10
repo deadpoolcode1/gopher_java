@@ -12,7 +12,7 @@ public class App {
         String tableName = "TestDB";
 
         boolean success = true;
-/* 
+ 
         if (!Database.tableExists(dbName, tableName, server, username, password)) {
             if (!Database.createTable(dbName, tableName, server, username, password)) {
                 success = false;
@@ -29,7 +29,7 @@ public class App {
         if (data.isEmpty() || !data.get(0).equals("Value1")) {
             success = false;
         }
-*/
+
         if (success) {
             System.out.println("unittest passed");
             return true;
@@ -44,7 +44,7 @@ public class App {
         if (!unittest()) {
             System.exit(1); // Exit with error code if unittest fails
         }
-        //Monitor.monitor();
+        Monitor.monitor();
         System.exit(0); // Exit with success code
     }
 }
