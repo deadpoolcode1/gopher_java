@@ -1,27 +1,34 @@
 package com.yourcompany.app;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Monitor {
 
+    // Thread-safe queue to hold messages
+    private static ConcurrentLinkedQueue<String> messageQueue = new ConcurrentLinkedQueue<>();
+
+    // Method to be called by MessageListener when a new message is received
+    public static void newMessage(String message) {
+        messageQueue.offer(message);
+    }
+
     private static void processEntry(String entry, String action, String server, String username, String password, String dbName) {
         System.out.println("Action " + action + " was requested, table row is: " + entry);
-    
+
         // Extract the 'id' from the entry, assuming it's the first value in a comma-separated entry
         String id = entry.split(",")[0];
-    
+
         // Update query to set request_pending to 0 and timestamp_pending_process to the current timestamp
         String updateQuery1 = "UPDATE " + (action.equals("read") ? "read_data" : "write_data") +
                               " SET request_pending = 0, timestamp_pending_process = CURRENT_TIMESTAMP WHERE id = " + id;
-    
         Database.executeNonQuery(dbName, updateQuery1, server, username, password);
-    
+
         System.out.println("Processing LMDS start ID: " + id);
-    
+
         if (action.equals("read")) {
             // Update query to set reply_pending to 1
             String updateQuery2 = "UPDATE read_data SET reply_pending = 1 WHERE id = " + id;
@@ -32,29 +39,32 @@ public class Monitor {
                 // Query to check if the stop request is made
                 String checkStopQuery = "SELECT request_to_stop FROM read_data WHERE id = " + id;
                 List<String> result = Database.executeQuery(dbName, checkStopQuery, server, username, password);
-                
-    
+
                 // Check if the stop request is made
                 if (!result.isEmpty() && "1".equals(result.get(0))) {
                     stopRequested = true;
                 } else {
-                    // Insert 'hello' into read_data_info and sleep for 1 second
-                    String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES (" + id + ", 'hello')";
-                    Database.executeNonQuery(dbName, insertQuery, server, username, password);
-                    try {
-                        Thread.sleep(1000); // Sleep for 1 second
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        return;
+                    // Check for new messages in the queue
+                    String messageText = messageQueue.poll();
+                    if (messageText != null) {
+                        // Insert real message text into read_data_info
+                        String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + id + "', '" + messageText + "')";
+                        Database.executeNonQuery(dbName, insertQuery, server, username, password);
                     }
+                }
+
+                // Sleep for a short duration to prevent high CPU usage
+                try {
+                    Thread.sleep(100); // Sleep for 100 milliseconds
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             }
         }
-    
+
         System.out.println("Processing LMDS end ID: " + id);
     }
-    
-    
 
     public static boolean monitor() {
         String server = Config.getDBServer();

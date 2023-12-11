@@ -38,6 +38,12 @@ public class MessageListener implements SerialPortMessageListener {
         return true;
     }
 
+    private MessageReceivedListener receivedListener;
+
+    public MessageListener(MessageReceivedListener listener) {
+        this.receivedListener = listener;
+    }
+
     @Override
     public void serialEvent(SerialPortEvent event)
     // called back by jSerial when a message delimited by end sync bytes is received from the UUT
@@ -88,8 +94,19 @@ public class MessageListener implements SerialPortMessageListener {
                 }
             }
         }
+        String messageText = extractMessageText(event); // Implement this method based on your needs
+        if (receivedListener != null) {
+            receivedListener.onMessageReceived(messageText);
+        }
     }
 
+    private String extractMessageText(SerialPortEvent event) {
+        // Implement logic to extract the text message from the event
+        // For example, if the event contains a TextMsg object, extract the text from it
+        // Example: return new String(event.getReceivedData(), StandardCharsets.UTF_8);
+        return ""; // Placeholder, replace with actual extraction logic
+    }
+    
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX
         int rx_body_size = msg.length - (LM.GetSize() + 8);
