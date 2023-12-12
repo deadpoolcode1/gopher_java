@@ -17,10 +17,17 @@ public class GPS_UBX_Data {
             hAcc, // 8  Horizontal accuracy estimate, meters, *10000
             vAcc; // 9  Vertical accuracy estimate, meters, *10000
 
+    // Constructor with MsgRdr
     public GPS_UBX_Data(MsgRdr mr) {
-                DecodeUBX_NAV_HPPOSLLH(mr);
+        // Initialization logic here
+        DecodeUBX_NAV_HPPOSLLH(mr);
     }
 
+    // Overloaded constructor with no arguments
+    public GPS_UBX_Data() {
+        // Default constructor logic (if needed)
+    }
+    
     public void Update(byte[] gPS_UBX_data) {
         /**
          * input: GPS UBX message data, including header, without the checksum
