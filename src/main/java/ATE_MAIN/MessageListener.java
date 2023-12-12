@@ -9,7 +9,7 @@ import LMDS_ICD.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import com.fazecast.jSerialComm.SerialPortMessageListener;
-
+import com.google.gson.Gson;
 import java.nio.charset.StandardCharsets;
 
 public class MessageListener implements SerialPortMessageListener {
@@ -95,17 +95,74 @@ public class MessageListener implements SerialPortMessageListener {
             }
         }
         String messageText = extractMessageText(event); // Implement this method based on your needs
-        if (receivedListener != null) {
+        if (receivedListener != null && messageText != null && !messageText.isEmpty()) {
             receivedListener.onMessageReceived(messageText);
         }
     }
 
     private String extractMessageText(SerialPortEvent event) {
-        // Implement logic to extract the text message from the event
-        // For example, if the event contains a TextMsg object, extract the text from it
-        // Example: return new String(event.getReceivedData(), StandardCharsets.UTF_8);
-        return ""; // Placeholder, replace with actual extraction logic
+        byte[] msg = event.getReceivedData();
+        MsgRdr MR = new MsgRdr(msg); // set for incoming msg serialization
+        LMDS_HDR LM = new LMDS_HDR(MR); // read the header
+    
+        Gson gson = new Gson();
+        String jsonMessage = "";
+    
+        // Classify and serialize based on the message code
+        switch (LM.msg_code) {
+            case MSG_CODE_CMND_RSPNS:
+                UUT_rspns UTR = new UUT_rspns(MR);
+                jsonMessage = gson.toJson(UTR);
+                break;
+            case MSG_CODE_TEMP_MSRMNTS:
+                temp_msrmnts TM = new temp_msrmnts(MR);
+                jsonMessage = gson.toJson(TM);
+                break;
+            case MSG_CODE_DSCRT_STTS:
+                dscrt_stts DST = new dscrt_stts(MR);
+                jsonMessage = gson.toJson(DST);
+                break;
+            case MSG_CODE_PWR_MSRMNT:
+                pwr_sgnals_msrmnts PSM = new pwr_sgnals_msrmnts(MR);
+                jsonMessage = gson.toJson(PSM);
+                break;
+            case MSG_CODE_AIR_DATA:
+                air_data AD = new air_data(MR);
+                jsonMessage = gson.toJson(AD);
+                break;
+            case MSG_CODE_SER_COMM_TST:
+                srial_comms_tst commTestMsg = new srial_comms_tst(MR);
+                jsonMessage = gson.toJson(commTestMsg);
+                break;
+            case MSG_CODE_TEXT:
+                TextMsg textMsg = new TextMsg(MR);
+                jsonMessage = gson.toJson(textMsg);
+                break;
+            case MSG_CODE_TX_GPS_MPU:
+                GPS_UBX_Data gpsTextMsg = new GPS_UBX_Data(MR);
+                jsonMessage = gson.toJson(gpsTextMsg);
+                break;
+            case MSG_CODE_TX_AHRS:
+                AHRS_packet_hdr ahrsTextMsg = new AHRS_packet_hdr(MR);
+                jsonMessage = gson.toJson(ahrsTextMsg);
+                break;
+            case MSG_CODE_INT_COMM_TST_RSLTS:
+                Internal_comms_test_results ICTR = new Internal_comms_test_results(MR);
+                jsonMessage = gson.toJson(ICTR);
+                break;
+            case MSG_CODE_EO_STTS:
+                LM_Camera_Status eoStatusMsg = new LM_Camera_Status(MR);
+                jsonMessage = gson.toJson(eoStatusMsg);
+                break;
+            default:
+                System.out.println("Unknown message type: " + LM.msg_code);
+                break;
+        }
+    
+        return jsonMessage;
     }
+    
+
     
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX

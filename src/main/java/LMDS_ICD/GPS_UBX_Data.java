@@ -17,6 +17,10 @@ public class GPS_UBX_Data {
             hAcc, // 8  Horizontal accuracy estimate, meters, *10000
             vAcc; // 9  Vertical accuracy estimate, meters, *10000
 
+    public GPS_UBX_Data(MsgRdr mr) {
+                DecodeUBX_NAV_HPPOSLLH(mr);
+    }
+
     public void Update(byte[] gPS_UBX_data) {
         /**
          * input: GPS UBX message data, including header, without the checksum
