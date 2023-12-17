@@ -25,7 +25,8 @@ public class Navigation_Data {
          *        The function decodes the message, and populates the above public fields
          */
         MsgRdr MR = new MsgRdr(AHRS_data); // set for incoming msg serialization
-        AHRS_packet_hdr APH = new AHRS_packet_hdr(MR);
+        //UBX_packet_hdr_wsync APH = new UBX_packet_hdr_wsync(MR);
+        UBX_packet_hdr_nsync APH = new UBX_packet_hdr_nsync(MR);
         // assume the SYNC, checksum and length fields are OK, and were validated by the LMDS before sending it to the ATE
         switch(APH.ID) {
             case ID_sampleA:

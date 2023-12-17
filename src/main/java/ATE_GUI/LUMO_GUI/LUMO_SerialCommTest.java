@@ -15,7 +15,7 @@ import java.awt.event.ActionListener;
 public class LUMO_SerialCommTest extends DialogTemplate {
     //private static JList SelectionList;
     private static final String[] listItems =
-            { "Service", "UBLOX GPS/SAASM GPS", "UART_8", "Fuze#1" };
+            { "Service", "UBLOX GPS/SAASM GPS", "Fuze#2", "Fuze#1" }; // TODO missing support for UARTS 1,2
     //          0               1       2            3
     //private static int item=0;
     private int port = CMN_GD.ServicePort;
@@ -92,17 +92,17 @@ public class LUMO_SerialCommTest extends DialogTemplate {
                         SenderProcess = EnDef.process_name_ce.PR_ATE_TF1;
                         SenderHost = EnDef.host_name_ce.HOST_GPS_UBLOX_PRXY;
                         break;
-                    case 2:  // UART 8
+                    case 2:  // Fuze#2
                         port = CMN_GD.OtherPort;
                         SenderProcess = EnDef.process_name_ce.PR_ATE_TF1;
-                        SenderHost = EnDef.host_name_ce.HOST_LUMO_UART8_PRXY;
+                        SenderHost = EnDef.host_name_ce.HOST_FUZE2_PRXY;
                         break;
                     case 3:  // Fuze#1
                         port = CMN_GD.OtherPort;
                         SenderProcess = EnDef.process_name_ce.PR_ATE_TF1;
                         SenderHost = EnDef.host_name_ce.HOST_FUZE1_PRXY;
                         break;
-                        // may add here more ports
+                        // may add here more ports TODO missing support for UARTS 1,2
                 }
             }
         });

@@ -8,7 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class LUMO_GPS_Monitor extends JPanel {
-    public static JLabel message_line, TestHint;
+    public static JLabel message_line, ack_nak_line, TestHint;
     JFrame HostFrame = null;
     public static boolean init_done = false;
 
@@ -45,6 +45,7 @@ public class LUMO_GPS_Monitor extends JPanel {
             }
         });
         */
+        ack_nak_line = SetLabel("GPS Ack/Nak line:", new Dimension(590, 20));
         message_line = SetLabel("Message area", new Dimension(590, 250));
         ShowData();
         //add(TestHint);
@@ -52,6 +53,7 @@ public class LUMO_GPS_Monitor extends JPanel {
         //add(SampleB);
         //add(System_Btn);
         //add(new JScrollPane(message_line));
+        add(ack_nak_line);
         add(message_line);
         init_done = true;
     }
@@ -127,8 +129,8 @@ public class LUMO_GPS_Monitor extends JPanel {
 */
     public static void ShowData() {
         String GPS_text = LUMO_GD.gPS_UBX_Data.ToString();
+        ack_nak_line.setText(LUMO_GD.gPS_UBX_Data.ack_or_nak+LUMO_GD.gPS_UBX_Data.ack_nak_class+", "+LUMO_GD.gPS_UBX_Data.ack_nak_id);
         message_line.setText(GPS_text);
-
     }
     JLabel SetLabel(String text, Dimension dim) {
         JLabel label = new JLabel (text);

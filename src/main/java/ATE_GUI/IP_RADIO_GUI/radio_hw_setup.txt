@@ -1,0 +1,49 @@
+1. Connect NICs and Install Drivers:
+
+    Ensure both Ethernet NICs are physically connected to the appropriate network cables.
+    Make sure you have the latest drivers installed for both NICs.
+    Assign Static IP Addresses:
+        Right-click on the Start menu and select "Network Connections."
+        Right-click on the first Ethernet connection (NIC 1) and select "Properties."
+        Select "Internet Protocol Version 4 (TCP/IPv4)" and click "Properties."
+        Choose the option to "Use the following IP address" and enter 192.20.1.100 as the IP address, and 255.255.0.0 as the subnet mask.
+
+    Follow the same steps for the second Ethernet connection (NIC 2), assigning 192.20.2.100 as the IP address and the same subnet mask.
+
+2. Configure Routing for NIC 1:
+
+    Open a Command Prompt as administrator.
+    Run the command to add a static route for the device you want to communicate with through NIC 1:
+        "route -p add 172.20.99.192 mask 255.255.255.255 172.20.1.100"
+    This command sets up a static route for the specific device 172.20.99.192 through NIC 1's IP address.
+
+3. Configure Routing for NIC 2:
+
+    Similarly, run the following command to add a static route for the device you want to communicate with through NIC 2:
+        route -p add 172.20.77.161 mask 255.255.255.255 172.20.2.100
+
+4 Validate Routing Table:
+
+    Run the command route print in the Command Prompt to verify that the static routes have been added correctly and are active.
+5. Disable Automatic Metric:
+
+    As mentioned earlier, you may want to manually set the metric values for each NIC to prioritize their usage.
+    Follow the steps described in the previous response to set the metric values for both NICs.
+6. Testing:
+
+    Connect the devices you want to communicate with to the respective NICs.
+    Test connectivity by sending both TCP and UDP traffic to the designated devices' IP addresses.
+    The routing configuration should ensure that the traffic goes through the correct NIC based on the static routes you've set up.
+    Remember that these configurations can affect your network setup, and it's advisable to make these changes when you're familiar
+     with networking concepts. Additionally, setting up static routes might lead to network issues if not done correctly,
+     so be cautious and have a backup plan in case anything goes wrong.
+
+ 7. If you encounter issues or need to undo the configurations you've made for the multiple NICs and static routes,
+     you can follow these steps to revert to your previous network configuration:
+
+    Removing Static Routes:
+
+    Open a Command Prompt as administrator.
+        Run the command to delete the static routes you previously added. For example, to remove the route for 192.20.11.22 through NIC 1:
+            route delete 172.20.99.192
+        Repeat the command for any other static routes you added.

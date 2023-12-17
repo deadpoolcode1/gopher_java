@@ -9,18 +9,21 @@ import LMDS_ICD.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import com.fazecast.jSerialComm.SerialPortMessageListener;
-import com.google.gson.Gson;
+
 import java.nio.charset.StandardCharsets;
 
 public class MessageListener implements SerialPortMessageListener {
     static final int MAX_LENGTH = 248;
+    final static int MSG_FRAME_SIZE = 32+8; // header + tail
     // a class based on the jSerial data comm package. Tests receiving and serializing UUT LMDS messages
     static int cnt = 0;
     int TEST_MSG_SIZE = new TestMsg().GetSize();
     int TEXT_MSG_SIZE = new TextMsg().GetSize();
+    int port_index = -1;
     static byte[] delimiter = {(byte) 0xca, (byte) 0xfe, (byte) 0x2d, (byte) 0xad};
 
-    public MessageListener() {
+    public MessageListener(int port_index) {
+        this.port_index = port_index;
     }
 
     @Override
@@ -38,12 +41,6 @@ public class MessageListener implements SerialPortMessageListener {
         return true;
     }
 
-    private MessageReceivedListener receivedListener;
-
-    public MessageListener(MessageReceivedListener listener) {
-        this.receivedListener = listener;
-    }
-
     @Override
     public void serialEvent(SerialPortEvent event)
     // called back by jSerial when a message delimited by end sync bytes is received from the UUT
@@ -52,8 +49,8 @@ public class MessageListener implements SerialPortMessageListener {
         byte[] msg = event.getReceivedData();
         String port_name = event.getSerialPort().getSystemPortName();
         int ml = msg.length;
-        if (ml > MAX_LENGTH) {
-            System.out.println(port_name + " RX" + cnt + "Received msg too large, ignored. Length: " + msg.length);
+        if (ml > MAX_LENGTH || ml < MSG_FRAME_SIZE) {
+            System.out.println(port_name + " RX" + cnt + "Received msg too large or too small, ignored. Length: " + msg.length);
         } else {
             MsgRdr MR = new MsgRdr(msg); // set for incoming msg serialization
             LMDS_HDR LM = new LMDS_HDR(MR); // read the header
@@ -63,30 +60,36 @@ public class MessageListener implements SerialPortMessageListener {
             } else {
                 MsgTail MT = new MsgTail(msg, LM.length - 8);
                 if (MT.IsGoodChecksum(msg, LM.length)) {
-                    // a good one... send to destination process
-                    switch (LM.dest_address.process_name) // those processes simulate ATE specific test functions
-                    {
-                        case PR_ATE_TF1:
-                            // use this TF for messages arriving from the LUMO UUT
-                            Process_TF1_Msgs(MR, LM, msg, port_name);
-                            break;
-                        case PR_ATE_TF2:
-                            // use this TF for messages arriving from the PCM UUT
-                            Process_TF2_Msgs(MR, LM, msg, port_name);
-                            break;
-                        case PR_ATE_TF3:
-                            // use this TF for messages arriving from the MPU UUT
-                            Process_TF3_Msgs(MR, LM, msg, port_name);
-                            break;
-                        case PR_ATE_TF4:
-                            // use this TF for messages arriving from the JPM UUT
-                            Process_TF4_Msgs(MR, LM, msg, port_name);
-                            break;
-                        case PR_UNKNOWN:
-                        default: {
-                            System.out.println(port_name + " RX" + cnt + "Received msg body has illegal process address=" +
-                                    LM.dest_address.process_name);
+                    // a good one... call the destination process
+                    if(CMN_GD.ATE_SIM_MODE) {
+                        switch (LM.dest_address.process_name) // those processes simulate ATE specific test functions
+                        {
+                            case PR_ATE_TF1:
+                                // use this TF for messages arriving from the LUMO UUT
+                                Process_TF1_Msgs(MR, LM, msg, port_name);
+                                break;
+                            case PR_ATE_TF2:
+                                // use this TF for messages arriving from the PCM UUT
+                                Process_TF2_Msgs(MR, LM, msg, port_name);
+                                break;
+                            case PR_ATE_TF3:
+                                // use this TF for messages arriving from the MPU UUT
+                                Process_TF3_Msgs(MR, LM, msg, port_name);
+                                break;
+                            case PR_ATE_TF4:
+                                // use this TF for messages arriving from the JPM UUT
+                                Process_TF4_Msgs(MR, LM, msg, port_name);
+                                break;
+                            case PR_UNKNOWN:
+                            default: {
+                                System.out.println(port_name + " RX" + cnt + "Received msg body has illegal process address=" +
+                                        LM.dest_address.process_name);
+                            }
                         }
+                    }
+                    else {
+                        // GOPHER usage
+                        Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
                     }
 
                 } else {
@@ -94,85 +97,30 @@ public class MessageListener implements SerialPortMessageListener {
                 }
             }
         }
-        String messageText = extractMessageText(event); // Implement this method based on your needs
-        if (receivedListener != null && messageText != null && !messageText.isEmpty()) {
-            receivedListener.onMessageReceived(messageText);
-        }
     }
 
-    private String extractMessageText(SerialPortEvent event) {
-        byte[] msg = event.getReceivedData();
-        MsgRdr MR = new MsgRdr(msg); // set for incoming msg serialization
-        LMDS_HDR LM = new LMDS_HDR(MR); // read the header
-    
-        Gson gson = new Gson();
-        String jsonMessage = "";
-    
-        // Classify and serialize based on the message code
-        switch (LM.msg_code) {
-            case MSG_CODE_CMND_RSPNS:
-                UUT_rspns UTR = new UUT_rspns(MR);
-                jsonMessage = gson.toJson(UTR);
-                break;
-            case MSG_CODE_TEMP_MSRMNTS:
-                temp_msrmnts TM = new temp_msrmnts(MR);
-                jsonMessage = gson.toJson(TM);
-                break;
-            case MSG_CODE_DSCRT_STTS:
-                dscrt_stts DST = new dscrt_stts(MR);
-                jsonMessage = gson.toJson(DST);
-                break;
-            case MSG_CODE_PWR_MSRMNT:
-                pwr_sgnals_msrmnts PSM = new pwr_sgnals_msrmnts(MR);
-                jsonMessage = gson.toJson(PSM);
-                break;
-            case MSG_CODE_AIR_DATA:
-                air_data AD = new air_data(MR);
-                jsonMessage = gson.toJson(AD);
-                break;
-            case MSG_CODE_SER_COMM_TST:
-                srial_comms_tst commTestMsg = new srial_comms_tst(MR);
-                jsonMessage = gson.toJson(commTestMsg);
-                break;
-            case MSG_CODE_TEXT:
-                TextMsg textMsg = new TextMsg(MR);
-                jsonMessage = gson.toJson(textMsg);
-                break;
-            case MSG_CODE_TX_GPS_MPU:
-                GPS_UBX_Data gpsTextMsg = new GPS_UBX_Data(MR);
-                jsonMessage = gson.toJson(gpsTextMsg);
-                break;
-            case MSG_CODE_TX_AHRS:
-                AHRS_packet_hdr ahrsTextMsg = new AHRS_packet_hdr(MR);
-                jsonMessage = gson.toJson(ahrsTextMsg);
-                break;
-            case MSG_CODE_INT_COMM_TST_RSLTS:
-                Internal_comms_test_results ICTR = new Internal_comms_test_results(MR);
-                jsonMessage = gson.toJson(ICTR);
-                break;
-            case MSG_CODE_EO_STTS:
-                LM_Camera_Status eoStatusMsg = new LM_Camera_Status(MR);
-                jsonMessage = gson.toJson(eoStatusMsg);
-                break;
-            default:
-                System.out.println("Unknown message type: " + LM.msg_code);
-                break;
-        }
-    
-        return jsonMessage;
+    private void Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
+       // GOPHER use
+        // select the file writer for this port IAW with the port index
+        // convert the lm header class instance to a json string and save it to the file
+        // decode the message into its LMDS_ICD class instance using mr, msg
+        // convert the class instance to a json string nd save it to the file
+        // consider error conditions
     }
-    
 
-    
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX
         int rx_body_size = msg.length - (LM.GetSize() + 8);
         switch (LM.msg_code) {
             case MSG_CODE_CMND_RSPNS:
                 UUT_rspns UTR = new UUT_rspns(MR);
-                CMN_GD.response_num = LM.serial_number;
-                CMN_GD.response_type = UTR.response_type;
-                CMN_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                JPM_GD.response_num = LM.serial_number;
+                JPM_GD.response_type = UTR.response_type;
+                JPM_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                break;
+            case MSG_CODE_GET_DS_REVSN:
+                DS_Revision DSR = new DS_Revision(MR);
+                JPM_GD.revision = new String(DSR.DS_revision, StandardCharsets.UTF_8);
                 break;
             case MSG_CODE_SER_COMM_TST:
                 CMN_GD.comm_n_rx++;
@@ -227,9 +175,13 @@ public class MessageListener implements SerialPortMessageListener {
         switch (LM.msg_code) {
             case MSG_CODE_CMND_RSPNS:
                 UUT_rspns UTR = new UUT_rspns(MR);
-                CMN_GD.response_num = LM.serial_number;
-                CMN_GD.response_type = UTR.response_type;
-                CMN_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                MPU_GD.response_num = LM.serial_number;
+                MPU_GD.response_type = UTR.response_type;
+                MPU_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                break;
+            case MSG_CODE_GET_DS_REVSN:
+                DS_Revision DSR = new DS_Revision(MR);
+                MPU_GD.revision = new String(DSR.DS_revision, StandardCharsets.UTF_8);
                 break;
             case MSG_CODE_PWR_MSRMNT:
                 pwr_sgnals_msrmnts PSM = new pwr_sgnals_msrmnts(MR);
@@ -297,6 +249,10 @@ public class MessageListener implements SerialPortMessageListener {
                 byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
                 ProcessEOMessage(EO_msg_body);
                 break;
+            case MSG_CODE_WRITE_GET_CNFG_PARAM:
+                config_param CP = new config_param(MR);
+                ProcessGetConfigParamMsg(CP);
+                break;
             case MSG_CODE_TEXT: {
                 // for now, we only have the same TX "TextMsg"
                 if (rx_body_size != TEXT_MSG_SIZE) {
@@ -330,9 +286,13 @@ public class MessageListener implements SerialPortMessageListener {
         switch (LM.msg_code) {
             case MSG_CODE_CMND_RSPNS:
                 UUT_rspns UTR = new UUT_rspns(MR);
-                CMN_GD.response_num = LM.serial_number;
-                CMN_GD.response_type = UTR.response_type;
-                CMN_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                PCM_GD.response_num = LM.serial_number;
+                PCM_GD.response_type = UTR.response_type;
+                PCM_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                break;
+            case MSG_CODE_GET_DS_REVSN:
+                DS_Revision DSR = new DS_Revision(MR);
+                PCM_GD.revision = new String(DSR.DS_revision, StandardCharsets.UTF_8);
                 break;
             case MSG_CODE_PRPLSN_STTS:
                 PCM_GD.lM_Propulsion_Status = new LM_Propulsion_Status(MR);
@@ -423,9 +383,13 @@ public class MessageListener implements SerialPortMessageListener {
         switch (LM.msg_code) {
             case MSG_CODE_CMND_RSPNS:
                 UUT_rspns UTR = new UUT_rspns(MR);
-                CMN_GD.response_num = LM.serial_number;
-                CMN_GD.response_type = UTR.response_type;
-                CMN_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                LUMO_GD.response_num = LM.serial_number;
+                LUMO_GD.response_type = UTR.response_type;
+                LUMO_GD.response_text = new String(UTR.response_text, StandardCharsets.UTF_8);
+                break;
+            case MSG_CODE_GET_DS_REVSN:
+                DS_Revision DSR = new DS_Revision(MR);
+                LUMO_GD.revision = new String(DSR.DS_revision, StandardCharsets.UTF_8);
                 break;
             case MSG_CODE_PWR_MSRMNT:
                 pwr_sgnals_msrmnts PSM = new pwr_sgnals_msrmnts(MR);
@@ -484,6 +448,10 @@ public class MessageListener implements SerialPortMessageListener {
                 byte[] saasm_msg_body = MessageBody.GetBytes(LM, msg);
                 ProcessSAASMMessage(saasm_msg_body);
                 break;
+            case MSG_CODE_WRITE_GET_CNFG_PARAM:
+                config_param CP = new config_param(MR);
+                ProcessGetConfigParamMsg(CP);
+                break;
             case MSG_CODE_TEXT: {
                 // for now, we only have the same TX "TextMsg"
                 if (rx_body_size != TEXT_MSG_SIZE) {
@@ -494,13 +462,58 @@ public class MessageListener implements SerialPortMessageListener {
                 TextMsg TXsg = new TextMsg(MR);
                 System.out.println(port_name + " RX" + cnt + " OK- " + TXsg.ToString());
                 break;
-            }
+                }
             case MSG_CODE_UNKNOWN:
             default: {
                 System.out.println(port_name + " RX" + cnt + "TF1 (LUMO) Received msg body has illegal/unsupported msg code=" +
                         LM.msg_code);
             }
         }
+    }
+
+    private void ProcessGetConfigParamMsg(config_param cp) {
+        switch(cp.config_params_id) {
+            case CP_LUMO_PITOT_GN_OFST:
+                LUMO_GD.pitot_gain = cp.data[0];
+                LUMO_GD.pitot_offset = cp.data[1];
+                break;
+            case CP_LUMO_ALT_GN_OFST:
+                LUMO_GD.alt_gain = cp.data[0];
+                LUMO_GD.alt_offset = cp.data[1];
+                break;
+            case CP_LUMO_PARA_CLS_OPN_RLS_PWM:
+                LUMO_GD.para_close = ToShort(cp.data[0], cp.data[1]);
+                LUMO_GD.para_open = ToShort(cp.data[2], cp.data[3]);
+                LUMO_GD.para_rls = ToShort(cp.data[4], cp.data[5]);
+                break;
+            case CP_LUMO_AV_FUZE_COMB:
+                LUMO_GD.av_fuze_comb = cp.data[0];
+                break;
+            case CP_LUMO_CMRA_BORSIT_OFST:
+                // TODO not supported 6-10-2023
+                LUMO_GD.cmra_brsit_pitch_offset = ToShort(cp.data[0], cp.data[1]);
+                LUMO_GD.cmra_brsit_yaw_offset = ToShort(cp.data[2], cp.data[3]);
+                break;
+            case CP_MPU_TAIL_OFST:
+                MPU_GD.rdr_1_ofst = cp.data[0];
+                MPU_GD.rdr_2_ofst = cp.data[1];
+                MPU_GD.rdr_3_ofst = cp.data[2];
+                MPU_GD.rdr_4_ofst = cp.data[3];
+                break;
+            case CP_MPU_AILRN_OFST:
+                MPU_GD.ailrn_1_ofst = cp.data[0];
+                MPU_GD.ailrn_2_ofst = cp.data[1];
+                MPU_GD.ailrn_3_ofst = cp.data[2];
+                MPU_GD.ailrn_4_ofst = cp.data[3];
+                break;
+            default:
+                System.out.println("Message Listener - illegal parameter ID. Ignored.  "+cp.config_params_id);
+                return;
+        }
+    }
+
+    private short ToShort(byte lo, byte hi) {
+        return (short)((lo & 0xff) | ((hi&0xff)<<8));
     }
 
     private void ProcessSAASMMessage(byte[] saasm_msg_body) {

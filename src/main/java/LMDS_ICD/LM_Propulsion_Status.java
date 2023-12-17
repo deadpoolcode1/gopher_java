@@ -14,8 +14,9 @@ public class LM_Propulsion_Status extends MessageBody {
    public float Output_Power;
    public float RPM_Electrical;
    public float Temperature;
+   public float RPM_Out;
    public LM_Propulsion_Status() {
-       Size = 32;
+       Size = 36;
    }
    public int GetSize() {return Size;}
    public LM_Propulsion_Status Clone() {
@@ -28,10 +29,11 @@ public class LM_Propulsion_Status extends MessageBody {
        copy.Output_Power = Output_Power;
        copy.RPM_Electrical = RPM_Electrical;
        copy.Temperature = Temperature;
+       copy.RPM_Out = RPM_Out;
        return copy;
    }
    public LM_Propulsion_Status(MsgRdr MR) {
-       Size = 32;
+       Size = 36;
        motor_state = EnDef.Motor_state_ce.values()[MR.Read_int()];
        Input_Voltage = MR.Read_float();
        Ripple_Input_Voltage = MR.Read_float();
@@ -40,6 +42,7 @@ public class LM_Propulsion_Status extends MessageBody {
        Output_Power = MR.Read_float();
        RPM_Electrical = MR.Read_float();
        Temperature = MR.Read_float();
+       RPM_Out = MR.Read_float();
    }
     public byte[] GetBytes() {
         byte[] bfr = new byte[Size];
@@ -52,6 +55,7 @@ public class LM_Propulsion_Status extends MessageBody {
         MB.Add(MB.GetBytes(Output_Power));
         MB.Add(MB.GetBytes(RPM_Electrical));
         MB.Add(MB.GetBytes(Temperature));
+        MB.Add(MB.GetBytes(RPM_Out));
        return bfr;
    }
    public String ToString() {
@@ -64,6 +68,7 @@ public class LM_Propulsion_Status extends MessageBody {
        s += " Output_Power: "+ Output_Power;
        s += " RPM_Electrical: "+ RPM_Electrical;
        s += " Temperature: "+ Temperature;
+       s += " RPM_Out: "+ RPM_Out;
        return s;
  }
 }

@@ -3,7 +3,10 @@ package LMDS_ICD;
 public class GPS_UBX_Data {
     // maintains GPS Ublocks Navigation data per the UBX-NAV-HPPOSLLH (0x01 0x14) message
     // (High Precision Geodetic Position Solution)
-    final short ID_UBX_NAV = (short) 0x1401;
+    final short ID_UBX_NAV_HP = (short) 0x1401; // High Precision NAV message ID & class
+    final short ID_UBX_NAV_RP = (short) 0x0201; // Regular Precision NAV message ID & class
+    final short ID_UBX_NAK= (short) 0x0005; // NAK message ID & class
+    final short ID_UBX_ACK = (short) 0x0105; // ACK message ID & class
     public int
             ver_res_flags, // 0   four bytes: 0-version, 1,2-reserved, 3-flag bits (bit 0 indicates invalid NAV)
             iTOW, // 1 GPS time of week, milliseconds
@@ -16,18 +19,9 @@ public class GPS_UBX_Data {
             hMSL, // 7  meters above ellipsoid * 1000
             hAcc, // 8  Horizontal accuracy estimate, meters, *10000
             vAcc; // 9  Vertical accuracy estimate, meters, *10000
+    public byte ack_nak_class, ack_nak_id;
+    public String ack_or_nak = "ACK for class/ID: ";
 
-    // Constructor with MsgRdr
-    public GPS_UBX_Data(MsgRdr mr) {
-        // Initialization logic here
-        DecodeUBX_NAV_HPPOSLLH(mr);
-    }
-
-    // Overloaded constructor with no arguments
-    public GPS_UBX_Data() {
-        // Default constructor logic (if needed)
-    }
-    
     public void Update(byte[] gPS_UBX_data) {
         /**
          * input: GPS UBX message data, including header, without the checksum
@@ -35,23 +29,48 @@ public class GPS_UBX_Data {
          *        the function decodes only the UBX-NAV-HPPOSLLH message and populates the above public fields
          */
         MsgRdr MR = new MsgRdr(gPS_UBX_data); // set for incoming msg serialization
-        AHRS_packet_hdr APH = new AHRS_packet_hdr(MR); // the AHRS uses the same framing protocol as the GPS UBX
+        UBX_packet_hdr_nsync APH = new UBX_packet_hdr_nsync(MR); // use a header without sync chars
         // assume the SYNC, checksum and length fields are OK, and were validated by the LMDS before sending it to the ATE
         switch (APH.ID) {
-            case ID_UBX_NAV:
+            case ID_UBX_NAV_HP: // high precision NAV data
                 DecodeUBX_NAV_HPPOSLLH(MR);
+                break;
+            case ID_UBX_NAV_RP: // regular precision NAV data
+                DecodeUBX_NAV_RPPOSLLH(MR);
+                break;
+            case ID_UBX_NAK:
+                ack_or_nak = "NAK for class/ID: ";
+                ack_nak_class = gPS_UBX_data[4];
+                ack_nak_id = gPS_UBX_data[5];
+                break;
+            case ID_UBX_ACK:
+                ack_or_nak = "ACK for class/ID: ";
+                ack_nak_class = gPS_UBX_data[4];
+                ack_nak_id = gPS_UBX_data[5];
                 break;
             default: // ignore all other messages
         }
     }
 
     private void DecodeUBX_NAV_HPPOSLLH(MsgRdr mr) {
-        GPS_UBX_NAV gPS_UBX_NAV = new GPS_UBX_NAV(mr);
+        GPS_UBX_NAV_HP gPS_UBX_NAV = new GPS_UBX_NAV_HP(mr);
         // int variables
         ver_res_flags = gPS_UBX_NAV.ver_res_flags;
         iTOW = gPS_UBX_NAV.iTOW;
         lon_lat_HP = gPS_UBX_NAV.lon_lat_HP;
         height_HP = gPS_UBX_NAV.height_HP;
+        // double variables
+        lon = ((double) gPS_UBX_NAV.lon) / 10000000.0;
+        lat = ((double) gPS_UBX_NAV.lat) / 10000000.0;
+        height = ((double) gPS_UBX_NAV.height) / 1000.0;
+        hMSL = ((double) gPS_UBX_NAV.hMSL) / 1000.0;
+        hAcc = ((double) gPS_UBX_NAV.hAcc) / 10000.0;
+        vAcc = ((double) gPS_UBX_NAV.vAcc) / 10000.0;
+    }
+    private void DecodeUBX_NAV_RPPOSLLH(MsgRdr mr) {
+        GPS_UBX_NAV_RP gPS_UBX_NAV = new GPS_UBX_NAV_RP(mr);
+        // int variables
+        iTOW = gPS_UBX_NAV.iTOW;
         // double variables
         lon = ((double) gPS_UBX_NAV.lon) / 10000000.0;
         lat = ((double) gPS_UBX_NAV.lat) / 10000000.0;

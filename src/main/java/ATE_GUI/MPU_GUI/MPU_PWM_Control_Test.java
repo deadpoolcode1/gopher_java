@@ -60,18 +60,13 @@ public class MPU_PWM_Control_Test extends DialogTemplate {
                     case 1:
                         PCS.pwm_id = EnDef.PWM_channel_id_ce.MPU_PWM_OUT2;
                         break;
+                    default:
                     case 2:
-                        PCS.pwm_id = EnDef.PWM_channel_id_ce.MPU_PWM_OUT3;
-                        break;
                     case 3:
-                        PCS.pwm_id = EnDef.PWM_channel_id_ce.MPU_PWM_OUT4;
-                        break;
                     case 4:
-                        PCS.pwm_id = EnDef.PWM_channel_id_ce.MPU_PWM_OUT5;
-                        break;
                     case 5:
-                        PCS.pwm_id = EnDef.PWM_channel_id_ce.MPU_PWM_OUT6;
-                        break;
+                        System.out.println("PWM Control - PWM 3 to 6 are not supported. Ignore..");
+                        return;
                 }
                 if(CMN_GD.ServicePort < 0) {
                     System.out.println("PWM_Control - Service comm port inactive. Can't send.");

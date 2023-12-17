@@ -4,7 +4,7 @@ import ATE_MAIN.MPU_GD;
 import LMDS_ICD.AHRS_Sample_A;
 import LMDS_ICD.AHRS_Sample_B;
 import LMDS_ICD.AHRS_System;
-import LMDS_ICD.AHRS_packet_hdr;
+import LMDS_ICD.UBX_packet_hdr_wsync;
 
 import javax.swing.*;
 import java.awt.*;
@@ -61,7 +61,7 @@ public class MPU_AHRS_Monitor extends JPanel {
     }
 
     private void TestSystem() {
-        AHRS_packet_hdr APH = new AHRS_packet_hdr();
+        UBX_packet_hdr_wsync APH = new UBX_packet_hdr_wsync();
         AHRS_System AHS = new AHRS_System();
         APH.SYNC = (short)0xB562;
         APH.ID = (short)0x05AB;
@@ -77,7 +77,7 @@ public class MPU_AHRS_Monitor extends JPanel {
     }
 
     private void TestSampleB() {
-        AHRS_packet_hdr APH = new AHRS_packet_hdr();
+        UBX_packet_hdr_wsync APH = new UBX_packet_hdr_wsync();
         AHRS_Sample_B ASB = new AHRS_Sample_B();
         APH.SYNC = (short)0xB562;
         APH.ID = (short)0x66AB;
@@ -102,7 +102,7 @@ public class MPU_AHRS_Monitor extends JPanel {
     }
 
     private void TestSampleA() {
-        AHRS_packet_hdr APH = new AHRS_packet_hdr();
+        UBX_packet_hdr_wsync APH = new UBX_packet_hdr_wsync();
         AHRS_Sample_A ASA = new AHRS_Sample_A();
         APH.SYNC = (short)0xB562;
         APH.ID = (short)0x07AB;

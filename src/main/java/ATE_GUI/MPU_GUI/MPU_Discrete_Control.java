@@ -16,8 +16,8 @@ public class MPU_Discrete_Control extends DialogTemplate {
     private static final String[] listItems =
             {
                     "MCU_DSP_RST",          //0
-                    "DEBUG_LED_1",          //1
-                    "DEBUG_LED_2",          //2
+                    "LED_GREEN",            //1
+                    "LED_RED",              //2
                     "MCU_HW_RST_INHIBIT",   //3
                     "HW_PWR_SW1",           //4
                     "VPU_GP1",              //5
@@ -28,6 +28,10 @@ public class MPU_Discrete_Control extends DialogTemplate {
                     "DISC_OUT2_CON",        //10
                     "DISC_OUT3_CON",        //11
                     "DISC_OUT_JPM_PWR_DIS", //12
+                    "JETSON_PWR_ON_OFF",    //13
+                    "CAMERA_ON_OFF",        //14
+                    "MIPI_RSTN",            //15
+                    "FAN_ON_OFF"            //16
             };
     private static final String[] Discrete_States = { "Low", "High" };
     //                                                  0       1
@@ -64,10 +68,10 @@ public class MPU_Discrete_Control extends DialogTemplate {
                         DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_MCU_DSP_RST;
                         break;
                     case 1:
-                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_DEBUG_LED_1;
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_LED_GREEN;
                         break;
                     case 2:
-                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_DEBUG_LED_2;
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_LED_RED;
                         break;
                     case 3:
                         DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_MCU_HW_RST_INHIBIT;
@@ -99,18 +103,27 @@ public class MPU_Discrete_Control extends DialogTemplate {
                     case 12:
                         DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_JPM_PWR_DIS;
                         break;
+                    case 13:
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_JETSON_PWR_ON_OFF;
+                        break;
+                    case 14:
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_CAMERA_ON_OFF;
+                        break;
+                    case 15:
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_MIPI_RSTN;
+                        break;
+                    case 16:
+                        DC.dscrt_state_cntrl.dscrt_id = EnDef.dscrt_id_ce.MPU_DSCRT_OUT_FAN_ON_OFF;
+                        break;
                 }
                 if(CMN_GD.ServicePort < 0) {
                     System.out.println("Discrete_Control - Service comm port inactive. Can't send.");
                     return;
                 }
-                if(CMN_GD.ServicePort >=0)
-                    main.SendMessage(CMN_GD.ServicePort,
-                            main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
-                            main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF3),
-                            EnDef.msg_code_ce.MSG_CODE_DSCRT_CNTRL, DC);
-                else
-                    System.out.println("Discrete_Control - Service comm port inactive. Can't send.");
+                main.SendMessage(CMN_GD.ServicePort,
+                        main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
+                        main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF3),
+                        EnDef.msg_code_ce.MSG_CODE_DSCRT_CNTRL, DC);
 
             }
         });

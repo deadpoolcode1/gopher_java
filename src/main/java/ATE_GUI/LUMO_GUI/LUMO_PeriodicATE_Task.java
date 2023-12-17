@@ -1,5 +1,7 @@
 package ATE_GUI.LUMO_GUI;
 
+import ATE_GUI.JPM_GUI.JPM_TestSelect;
+import ATE_MAIN.JPM_GD;
 import ATE_MAIN.LUMO_GD;
 import ATE_MAIN.CMN_GD;
 
@@ -18,13 +20,33 @@ public class LUMO_PeriodicATE_Task extends Thread {
                 @Override public void run() {
                     if(LUMO_TestSelect.init_done) {
                         LUMO_TestSelect.message_line.setText(
-                                "Response# " + CMN_GD.response_num + "  " + CMN_GD.response_type + "  " + CMN_GD.response_text);
+                                "Message line: Response# " + LUMO_GD.response_num + "  " + LUMO_GD.response_type + "  " + LUMO_GD.response_text);
 
                         //TestSelect.sinXY.UpdateDataset1();
-                        LUMO_TestSelect.serial_test_line.setText( "Port="+ CMN_GD.comm_channel_name+
+                        LUMO_TestSelect.serial_test_line.setText( "Serial Test Line: Port="+ CMN_GD.comm_channel_name+
                                 "  TX="+ CMN_GD.comm_n_tx+"  RX="+ CMN_GD.comm_n_rx+"  RX/TX="+ CMN_GD.comm_n_rx/ CMN_GD.comm_n_tx);
-                        LUMO_TestSelect.in_discrete_line.setText("Dip Switch="+ LUMO_GD.dip_switch+" umbili_init="+ LUMO_GD.umbili_init
-                        +"  NG_ESAD_Status="+ LUMO_GD.NG_ESAD_Status);
+                        LUMO_TestSelect.in_discrete_line.setText("In Discrete Line: Dip Switch="+ LUMO_GD.dip_switch+" umbili_init="+ LUMO_GD.umbili_init
+                                +"  NG_ESAD_Status="+ LUMO_GD.NG_ESAD_Status);
+                        LUMO_TestSelect.config_params_line1.setText("Config Params Line1: "+
+                                "pitot_gain="+ LUMO_GD.pitot_gain+
+                                "  pitot_offset="+ LUMO_GD.pitot_offset+
+                                "  alt_gain="+ LUMO_GD.alt_gain+
+                                "  alt_offset="+ LUMO_GD.alt_offset+
+                                "  para_close="+ LUMO_GD.para_close+
+                                "  para_open="+ LUMO_GD.para_open+
+                                "  para_rls="+ LUMO_GD.para_rls
+                                );
+                        LUMO_TestSelect.config_params_line2.setText("Config Params Line2: "+
+                                "  av_fuze_comb="+ LUMO_GD.av_fuze_comb+
+                                "  cmra_brsit_pitch_offset="+ LUMO_GD.cmra_brsit_pitch_offset+
+                                "  cmra_brsit_yaw_offset="+ LUMO_GD.cmra_brsit_yaw_offset
+                        );
+                        LUMO_TestSelect.revision_state_line.setText(
+                                "revision_state_line: State="+ LUMO_GD.UUT_state +
+                                        "  Revision: "+LUMO_GD.revision
+                        );
+                        LUMO_GPS_Monitor.ShowData();
+
                         /**
                          // charts simulations
                         if(time_tick % 200 == 0) {

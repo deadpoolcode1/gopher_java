@@ -2,7 +2,10 @@ package ATE_GUI.JPM_GUI;
 
 import ATE_GUI.GUI_CMN.DS_Control;
 import ATE_GUI.JPM_GUI.*;
+import ATE_MAIN.CMN_GD;
+import ATE_MAIN.main;
 import LMDS_ICD.EnDef;
+import LMDS_ICD.MessageBody;
 
 import javax.swing.*;
 import java.awt.*;
@@ -29,21 +32,22 @@ public class JPM_TestSelect extends JPanel {
     private static JPanel TestSelectPanel;
     private static JList TestSelectionList;
     public static JPM_TemperatureChart JPMTemperatureChart;
-    public static JLabel message_line, serial_test_line, in_discrete_line;
+    public static JLabel message_line, serial_test_line, in_discrete_line, revision_state_line;
     public static boolean init_done = false;
     JFrame HostFrame = null;
 
     private static final String[] listItems =
-            { "Set UUT State", "Serial Comm Test", "Discrete out control" };
-    //            0               1                       2
+            { "Set UUT State", "Serial Comm Test", "Discrete out control", "Get Revision & State" };
+    //            0               1                       2                   3
 
     public JPM_TestSelect(JFrame HostFrame) {
         this.HostFrame = HostFrame;
         setSize(1000, 700);
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        message_line = SetLabel("Message area", new Dimension(1000,20));
-        serial_test_line = SetLabel("Serial Test results", new Dimension(1000,20));
-        in_discrete_line = SetLabel("in_discrete_line", new Dimension(1000,20));
+        message_line = SetLabel("Message area:", new Dimension(1000,20));
+        serial_test_line = SetLabel("Serial Test results:", new Dimension(1000,20));
+        in_discrete_line = SetLabel("in discrete line:", new Dimension(1000,20));
+        revision_state_line = SetLabel("Revision & State line:", new Dimension(1000,20));
         TestSelectPanel = new JPanel();
         TestSelectionList = new JList(listItems);
         TestSelectionList.setFixedCellHeight(15);
@@ -67,7 +71,12 @@ public class JPM_TestSelect extends JPanel {
                         break;
                     case 2: JPM_Discrete_Control JPMDiscrete_Control_Dialog = new JPM_Discrete_Control(
                             HostFrame, "Discrete Control Test", new Dimension(400,550));
-                        break;
+                    case 3:
+                            main.SendMessage(CMN_GD.ServicePort,
+                                    main.GetNewAddress(EnDef.host_name_ce.HOST_JPM, EnDef.process_name_ce.PR_TST_CMND),
+                                    main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF4),
+                                    EnDef.msg_code_ce.MSG_CODE_GET_DS_REVSN, null);
+                            break;
                     default:
                         System.out.println("TestSelect - illegal item selected: "+item);
                 }

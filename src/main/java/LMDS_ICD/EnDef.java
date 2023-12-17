@@ -19,7 +19,10 @@ public class EnDef {
         HOST_AHRS_PRXY,
         HOST_CAMERA_PRXY,
         HOST_LAN_PRXY,
-        HOST_LUMO_UART8_PRXY
+        HOST_FUZE2_PRXY,
+        HOST_OPM_PRXY,
+        HOST_JPM_USB1,
+        HOST_JPM_USB2
     };
     public enum process_name_ce{
         PR_UNKNOWN,
@@ -71,14 +74,21 @@ public class EnDef {
         MSG_CODE_TX_CAMERA,
         MSG_CODE_RX_CAMERA,
         MSG_CODE_TX_MCM,
-        MSG_CODE_RX_MCM
+        MSG_CODE_RX_MCM,
+        MSG_CODE_WRITE_GET_CNFG_PARAM,
+        MSG_CODE_READ_CNFG_PARAM,
+        MSG_CODE_SAVE_ALL_CNFG_PARAMS,
+        MSG_CODE_GET_DS_REVSN
     };
     public enum lmds_state_ce{
         LMDS_ST_UNKNOWN,
+        LMDS_ST_IDLE,
         LMDS_ST_SINGLE_UUT,
         LMDS_ST_AV_ASSY,
         LMDS_ST_INTEGRATED_LM,
-        LMDS_ST_LUMO_LP
+        LMDS_ST_LUMO_LP_NOGPS,
+        LMDS_ST_LUMO_LP_GPS_UBLOX,
+        LMDS_ST_LUMO_LP_GPS_SAASM
     };
     public enum camera_mode_ce{
         camera_mode_unknown,
@@ -144,8 +154,8 @@ public class EnDef {
         MPU_DSCRT_IN_DISC_IN5_CON,
         MPU_DSCRT_IN_JPM_FORCE_OFF_OUT_3V3,
         MPU_DSCRT_OUT_MCU_DSP_RST,
-        MPU_DSCRT_OUT_DEBUG_LED_1,
-        MPU_DSCRT_OUT_DEBUG_LED_2,
+        MPU_DSCRT_OUT_LED_GREEN,
+        MPU_DSCRT_OUT_LED_RED,
         MPU_DSCRT_OUT_MCU_HW_RST_INHIBIT,
         MPU_DSCRT_OUT_HW_PWR_SW1,
         MPU_DSCRT_OUT_VPU_GP1,
@@ -180,7 +190,12 @@ public class EnDef {
         JPM_DSCRT_OUT_GPIO09,
         JPM_DSCRT_IN_GPIO11,
         JPM_DSCRT_IN_GPIO12,
-        LUMO_DSCRT_OUT_PITOT_HTNG_CNTRL
+        LUMO_DSCRT_OUT_PITOT_HTNG_CNTRL,
+        PCM_DSCRT_IN_UAV_LAUNCHED,
+        MPU_DSCRT_OUT_JETSON_PWR_ON_OFF,
+        MPU_DSCRT_OUT_CAMERA_ON_OFF,
+        MPU_DSCRT_OUT_MIPI_RSTN,
+        MPU_DSCRT_OUT_FAN_ON_OFF
     };
     public enum PWM_channel_id_ce{
         PWM_UNKNOWN,
@@ -247,5 +262,15 @@ public class EnDef {
         PCM_12V_DC,
         PCM_8_2V_DC,
         PCM_BAT_V_DC
+    };
+    public enum config_params_ce{
+        CP_UNKNOWN,
+        CP_LUMO_PITOT_GN_OFST,
+        CP_LUMO_ALT_GN_OFST,
+        CP_LUMO_PARA_CLS_OPN_RLS_PWM,
+        CP_LUMO_AV_FUZE_COMB,
+        CP_LUMO_CMRA_BORSIT_OFST,
+        CP_MPU_TAIL_OFST,
+        CP_MPU_AILRN_OFST
     };
 }

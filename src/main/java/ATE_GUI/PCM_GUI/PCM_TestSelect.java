@@ -1,7 +1,10 @@
 package ATE_GUI.PCM_GUI;
 
 import ATE_GUI.GUI_CMN.DS_Control;
+import ATE_MAIN.CMN_GD;
+import ATE_MAIN.main;
 import LMDS_ICD.EnDef;
+import LMDS_ICD.MessageBody;
 
 import javax.swing.*;
 import java.awt.*;
@@ -31,13 +34,13 @@ public class PCM_TestSelect extends JPanel{
     //public static XYLineChartAWT sinXY;
     public static PCM_Voltage_Chart PCMVoltage_Chart;
     public static PCM_TemperatureChart PCMTemperatureChart;
-    public static JLabel message_line, serial_test_line, in_discrete_line;
+    public static JLabel message_line, serial_test_line, in_discrete_line, revision_state_line;
     public static boolean init_done = false;
     JFrame HostFrame = null;
 
     private static final String[] listItems =
-            { "Set UUT State", "Serial Comm Test", "PWM Test", "Discrete out control", "Propulsion Control"};
-    //          0               1                      2           3                       4
+            { "Set UUT State", "Serial Comm Test", "PWM Test", "Discrete out control", "Propulsion Control", "Get Revision & State" };
+    //          0               1                      2           3                       4                       5
 
     public PCM_TestSelect(JFrame HostFrame) {
         this.HostFrame = HostFrame;
@@ -45,6 +48,7 @@ public class PCM_TestSelect extends JPanel{
         message_line = SetLabel("Message area", new Dimension(1000,20));
         serial_test_line = SetLabel("Serial Test results", new Dimension(1000,20));
         in_discrete_line = SetLabel("Discrete IN", new Dimension(1000,20));
+        revision_state_line = SetLabel("Revision & State line:", new Dimension(1000,20));
         TestSelectPanel = new JPanel();
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         TestSelectionList = new JList(listItems);
@@ -76,6 +80,12 @@ public class PCM_TestSelect extends JPanel{
                         break;
                     case 4: PCM_Propulsion_Control PCM_Propulsion_Control_Dialog = new PCM_Propulsion_Control(
                             HostFrame, "PCM Propulsion Control Test", new Dimension(300,300));
+                        break;
+                    case 5:
+                        main.SendMessage(CMN_GD.ServicePort,
+                                main.GetNewAddress(EnDef.host_name_ce.HOST_PCM, EnDef.process_name_ce.PR_TST_CMND),
+                                main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF2),
+                                EnDef.msg_code_ce.MSG_CODE_GET_DS_REVSN, null);
                         break;
                     default:
                         System.out.println("TestSelect - illegal item selected: "+item);

@@ -102,7 +102,11 @@ public class ATE_JPM_LAN extends Thread {
             } else {
                 MsgTail MT = new MsgTail(msg, LM.length - 8);
                 if (MT.IsGoodChecksum(msg, LM.length)) {
-                    MessageListener.Process_TF4_Msgs(MR,LM,msg,port_name);
+                    if(CMN_GD.ATE_SIM_MODE)
+                        MessageListener.Process_TF4_Msgs(MR,LM,msg,port_name);
+                    else
+                        // GOPHER usage
+                        Decode_Msg_Into_Json_String(main.LAN_PORT_ID, MR, LM, msg);
                 }
                 else {
                     System.out.println(port_name + " RX " + "Received msg has bad checksum. ignored.");
@@ -110,4 +114,14 @@ public class ATE_JPM_LAN extends Thread {
             }
         }
     }
+    private void Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
+        // GOPHER use
+        // select the file writer for this port IAW with the port index
+        // convert the lm header class instance to a json string and save it to the file
+        // decode the message into its LMDS_ICD class instance using mr, msg
+        // convert the class instance to a json string nd save it to the file
+        // consider error conditions
+    }
+
+
 }

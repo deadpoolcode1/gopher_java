@@ -1,7 +1,10 @@
 package ATE_GUI.LUMO_GUI;
 
 import ATE_GUI.GUI_CMN.DS_Control;
+import ATE_MAIN.CMN_GD;
+import ATE_MAIN.main;
 import LMDS_ICD.EnDef;
+import LMDS_ICD.MessageBody;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,27 +36,31 @@ public class LUMO_TestSelect extends JPanel{
     public static ATE_GUI.LUMO_GUI.LUMO_AirSpeedChart LUMOAirSpeedChart;
     public static LUMO_AltitudeChart LUMOAltitudeChart;
     public static LUMO_TemperatureChart LUMOTemperatureChart;
-    public static JLabel message_line, serial_test_line, in_discrete_line;
+    public static JLabel message_line, serial_test_line, in_discrete_line,
+            config_params_line1, config_params_line2, revision_state_line;
     public static boolean init_done = false;
     JFrame HostFrame = null;
 
     private static final String[] listItems =
-            { "Set UUT State", "Serial Comm Test", "PWM Test", "Discrete out control", "ESAD control" };
-    //          0               1                   2           3                       4
+            { "Set UUT State", "Serial Comm Test", "PWM Test", "Discrete out control", "ESAD control", "Config Params Control", "Get Revision & State" };
+    //          0               1                   2           3                       4                  5                           6
 
     public LUMO_TestSelect(JFrame HostFrame) {
         this.HostFrame = HostFrame;
         setSize(1000, 700);
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        message_line = SetLabel("Message area", new Dimension(1000,20));
-        serial_test_line = SetLabel("Serial Test results", new Dimension(1000,20));
-        in_discrete_line = SetLabel("in_discrete_line", new Dimension(1000,20));
+        message_line = SetLabel("message_line: ", new Dimension(1000,20));
+        serial_test_line = SetLabel("serial_test_line: ", new Dimension(1000,20));
+        in_discrete_line = SetLabel("in_discrete_line: ", new Dimension(1000,20));
+        revision_state_line = SetLabel("Revision & State line:", new Dimension(1000,20));
+        config_params_line1 = SetLabel("config_params_line1: ", new Dimension(1000,20));
+        config_params_line2 = SetLabel("config_params_line2: ", new Dimension(1000,20));
         TestSelectPanel = new JPanel();
         TestSelectionList = new JList(listItems);
         TestSelectionList.setFixedCellHeight(15);
         TestSelectionList.setFixedCellWidth(150);
         TestSelectionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        TestSelectionList.setVisibleRowCount(5);
+        TestSelectionList.setVisibleRowCount(6);
         TestSelectionList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
@@ -77,6 +84,17 @@ public class LUMO_TestSelect extends JPanel{
                             HostFrame, "Discrete Control Test", new Dimension(400,550));
                         break;
                     case 4:
+                        // ESAD Control - Not supported
+                        break;
+                    case 5:
+                        LUMO_Config_Params_Control LUMO_Config_Params_Control_Dialog = new LUMO_Config_Params_Control(
+                                HostFrame, "Config Params Control", new Dimension(600,350));
+                        break;
+                    case 6:
+                        main.SendMessage(CMN_GD.ServicePort,
+                                main.GetNewAddress(EnDef.host_name_ce.HOST_LUMO, EnDef.process_name_ce.PR_TST_CMND),
+                                main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF1),
+                                EnDef.msg_code_ce.MSG_CODE_GET_DS_REVSN, null);
                         break;
                     default:
                         System.out.println("TestSelect - illegal item selected: "+item);
