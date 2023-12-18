@@ -70,6 +70,7 @@ public class main {
 
     static public void main(String[] args) throws IOException, ClassNotFoundException, URISyntaxException, ParseException {
         InitParameters(); // read the common configuration data
+        System.setProperty("java.awt.headless", "true");
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {

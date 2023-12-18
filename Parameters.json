@@ -1,0 +1,21 @@
+{
+  "API_Out_Folder": "C:\\Users\\shaif\\Documents\\SF Backup\\MSF Docs\\ATE\\ATE Design\\ATE_SW\\API_Out",
+  "Comment": "GOPHER use: add path for json folder to store sent out messages recordings. Need one file per port in this folder",
+  "GOPHER_Json_out_folder": "",
+  "ATE_IP_address": "10.20.2.100",
+  "Comment": "TEST_RADIOS=YES for enabling radio testing",
+  "TEST_RADIOS": "NO",
+  "Comment": "following addresses to allow the ATE streaming listeners over the radio sub-net (172.20.x.x)",
+  "ATE_RADIO_IP_address_GDT": "172.20.1.100",
+  "ATE_RADIO_IP_address_ADT": "172.20.2.100",
+  "Comment": "ADT address derived from the PM_DS_IP_address",
+  "JPM_DS_IP_address": "10.20.85.87",
+  "Comment": "ADT IP address is auto-generated from the JPM_DS_IP_address",
+  "ADT_PASSWORD": "HelloWorld",
+  "ATE_IP_Port": "56433",
+  "JPM_DS_IP_Port": "56432",
+  "GDT_IP_addres": "172.20.99.192",
+  "GDT_PASSWORD": "NONE",
+  "ADT_STREAMING_PORT": "2345",
+  "GDT_STREAMING_PORT": "2346"
+}
