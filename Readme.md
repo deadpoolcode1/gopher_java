@@ -108,3 +108,8 @@ nano ~/.bashrc
 export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED"
 source ~/.bashrc
 
+
+#maven local install
+
+mvn install:install-file -Dfile=/home/administrator/java/gopher/IP_Radio_Interface.jar -DgroupId=local -DartifactId=ip-radio-interface -Dversion=1.0 -Dpackaging=jar
+

@@ -46,6 +46,11 @@
             <artifactId>gson</artifactId>
             <version>2.8.6</version> <!-- Use the latest version available -->
         </dependency>
+        <dependency>
+            <groupId>local</groupId>
+            <artifactId>ip-radio-interface</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
     <build>
