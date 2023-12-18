@@ -39,10 +39,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import com.yourcompany.app.App;
+import com.yourcompany.app.MConfig;
 
 public class main {
     /**
@@ -68,7 +72,39 @@ public class main {
     public static JSONObject parameters=null;
 
 
+    private static Map<String, String> parseArguments(String[] args) {
+        Map<String, String> argMap = new HashMap<>();
+        for (int i = 0; i < args.length; i += 2) {
+            if (args[i].startsWith("--") && i + 1 < args.length) {
+                argMap.put(args[i].substring(2), args[i + 1]);
+            }
+        }
+        return argMap;
+    }
+
+    
+    /**
+     * @param args
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws URISyntaxException
+     * @throws ParseException
+     */
     static public void main(String[] args) throws IOException, ClassNotFoundException, URISyntaxException, ParseException {
+        if (!CMN_GD.ATE_SIM_MODE) {
+            Map<String, String> argMap = parseArguments(args);
+
+            String dbServer = argMap.getOrDefault("dbServer", "defaultServer");
+            String dbUsername = argMap.getOrDefault("dbUsername", "defaultUsername");
+            String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
+
+            // Initialize MConfig with parsed arguments
+            MConfig.initialize(dbServer, dbUsername, dbPassword);
+
+            if (!App.unittest()) {
+                System.exit(1); // Exit if the unit test fails
+            }
+        }
         InitParameters(); // read the common configuration data
         System.setProperty("java.awt.headless", "true");
         EventQueue.invokeLater(new Runnable() {

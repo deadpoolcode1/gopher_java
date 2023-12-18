@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch Main",
+            "request": "launch",
+            "mainClass": "ATE_MAIN.main",
+            "projectName": "gopher",
+            "args": "--dbServer localhost --dbUsername SA --dbPassword Ss6399812"
+        }
+    ]
+}

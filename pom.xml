@@ -64,6 +64,22 @@
                     <target>17</target> <!-- Set this to Java 17 -->
                 </configuration>
             </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.0.0</version> <!-- Use the latest version available -->
+            <configuration>
+                <mainClass>ATE_MAIN.main</mainClass> <!-- Replace with your main class -->
+                <arguments>
+                    <argument>--dbServer</argument>
+                    <argument>localhost</argument>
+                    <argument>--dbUsername</argument>
+                    <argument>SA</argument>
+                    <argument>--dbPassword</argument>
+                    <argument>Ss6399812</argument>
+                </arguments>
+            </configuration>
+        </plugin>
             <!-- ... other plugins if needed ... -->
         </plugins>
     </build>

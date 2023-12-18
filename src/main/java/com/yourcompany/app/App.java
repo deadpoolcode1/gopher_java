@@ -1,13 +1,15 @@
 package com.yourcompany.app;
 
+
+
 import java.util.List;
 
 public class App {
 
-    private static boolean unittest() {
-        String server = Config.getDBServer();
-        String username = Config.getDBUsername();
-        String password = Config.getDBPassword();
+    public static boolean unittest() {
+        String server = MConfig.getDBServer();
+        String username = MConfig.getDBUsername();
+        String password = MConfig.getDBPassword();
         String dbName = "TestDB";
         String tableName = "TestDB";
 
@@ -40,7 +42,7 @@ public class App {
     }
 
     public static void main(String[] args) {
-        Config.initialize("config.json");
+        MConfig.initialize("config.json");
         if (!unittest()) {
             System.exit(1); // Exit with error code if unittest fails
         }
