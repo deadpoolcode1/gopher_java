@@ -235,7 +235,7 @@ public class main {
             text[i] = sb[i];
     }
 
-    public static void SendMessage(int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body) {
+    public static void SendMessage(int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body) {//idx- 0 to 9 serial, 10 lan
         // builds a standard ATE message and sends it over the deignated port. body may be null. Other parameters must be non-null.
         int len=0;
         if(port_ix <0)
@@ -275,7 +275,7 @@ public class main {
     }
 
     private static void Record_Out_Message_In_Json(int portIx, LMDS_HDR lh, MessageBody msg_body) {
-        // GOPHER use - add code to record in Json sent out messages
+        // GOPHER use - add code to record in Json messages sent to LMDS (for gopher tester)
     }
 
     public static Address GetNewAddress(EnDef.host_name_ce host, EnDef.process_name_ce process) {
