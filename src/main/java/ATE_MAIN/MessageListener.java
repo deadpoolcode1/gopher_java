@@ -49,9 +49,8 @@ public class MessageListener implements SerialPortMessageListener {
     }
 
     @Override
-    public void serialEvent(SerialPortEvent event)
-    // called back by jSerial when a message delimited by end sync bytes is received from the UUT
-    {
+    public void serialEvent(SerialPortEvent event) {
+        // called back by jSerial when a message delimited by end sync bytes is received from the UUT
         cnt++;
         byte[] msg = event.getReceivedData();
         String port_name = event.getSerialPort().getSystemPortName();
@@ -62,56 +61,55 @@ public class MessageListener implements SerialPortMessageListener {
             MsgRdr MR = new MsgRdr(msg); // set for incoming msg serialization
             LMDS_HDR LM = new LMDS_HDR(MR); // read the header
             if (LM.length > ml) {
-                System.out.println("MessageListener: "+port_name + " RX" + cnt +
+                System.out.println("MessageListener: " + port_name + " RX" + cnt +
                         "  Received msg length in header < buffer length. HDR Length=" + LM.length + "  RX Buffer length=" + ml);
             } else {
                 MsgTail MT = new MsgTail(msg, LM.length - 8);
                 if (MT.IsGoodChecksum(msg, LM.length)) {
-                    // a good one... call the destination process
-                    if(CMN_GD.ATE_SIM_MODE) {
-                        switch (LM.dest_address.process_name) // those processes simulate ATE specific test functions
-                        {
+                    if (CMN_GD.ATE_SIM_MODE) {
+                        switch (LM.dest_address.process_name) {
                             case PR_ATE_TF1:
-                                // use this TF for messages arriving from the LUMO UUT
                                 Process_TF1_Msgs(MR, LM, msg, port_name);
                                 break;
                             case PR_ATE_TF2:
-                                // use this TF for messages arriving from the PCM UUT
                                 Process_TF2_Msgs(MR, LM, msg, port_name);
                                 break;
                             case PR_ATE_TF3:
-                                // use this TF for messages arriving from the MPU UUT
                                 Process_TF3_Msgs(MR, LM, msg, port_name);
                                 break;
                             case PR_ATE_TF4:
-                                // use this TF for messages arriving from the JPM UUT
                                 Process_TF4_Msgs(MR, LM, msg, port_name);
                                 break;
                             case PR_UNKNOWN:
-                            default: {
+                            default:
                                 System.out.println(port_name + " RX" + cnt + "Received msg body has illegal process address=" +
                                         LM.dest_address.process_name);
+                        }
+                    } else {
+                        String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + port_name + "' ORDER BY timestamp_pending_issued DESC";
+                        List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+    
+                        if (!requestData.isEmpty()) {
+                            String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
+                            String readDataId = dataParts[0];
+                            String requestPending = dataParts[1];
+    
+                            if ("1".equals(requestPending)) {
+                                Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+                                String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
+    
+                                String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '" + concatenatedJson + "')";
+                                Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                             }
                         }
                     }
-                    else {
-                        // GOPHER usage
-                        //check if the specific port is opened, if so then decode the message and save it to the database
-                        String checkRequestPendingQuery = "SELECT TOP 1 request_pending FROM read_data WHERE com = '" + port_name + "' AND request_pending = 1 ORDER BY timestamp_pending_issued DESC";
-                        List<String> requestPendingResult = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
-
-                        if (!requestPendingResult.isEmpty() && "1".equals(requestPendingResult.get(0))) {
-                        // The conditions are met, so call the Decode_Msg_Into_Json_String function
-                        Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
-                        } 
-                    }
-
                 } else {
                     System.out.println(port_name + " RX" + cnt + "Received msg has bad checksum. ignored.");
                 }
             }
         }
     }
+    
 
     private Pair<String, String> Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
     Gson gson = new Gson();

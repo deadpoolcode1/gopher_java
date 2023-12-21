@@ -81,12 +81,25 @@ database_create_initial_table() {
          AS
          BEGIN
              SET NOCOUNT ON;
-             IF UPDATE(request_pending) OR UPDATE(reply_pending)
+             IF UPDATE(request_pending) OR UPDATE(reply_pending) OR UPDATE(request_to_stop)
              BEGIN
                  UPDATE read_data
-                 SET timestamp_pending_issued = CASE WHEN INSERTED.request_pending = 1 THEN GETDATE() ELSE read_data.timestamp_pending_issued END,
-                     timestamp_reply_arrived = CASE WHEN INSERTED.reply_pending = 1 THEN GETDATE() ELSE read_data.timestamp_reply_arrived END,
-                     timestamp_reply_acknowledged = CASE WHEN INSERTED.reply_pending = 0 THEN GETDATE() ELSE read_data.timestamp_reply_acknowledged END
+                 SET timestamp_pending_issued = CASE 
+                                                   WHEN INSERTED.request_pending = 1 THEN GETDATE() 
+                                                   ELSE read_data.timestamp_pending_issued 
+                                               END,
+                     timestamp_reply_arrived = CASE 
+                                               WHEN INSERTED.reply_pending = 1 THEN GETDATE() 
+                                               ELSE read_data.timestamp_reply_arrived 
+                                           END,
+                     timestamp_reply_acknowledged = CASE 
+                                                     WHEN INSERTED.reply_pending = 0 THEN GETDATE() 
+                                                     ELSE read_data.timestamp_reply_acknowledged 
+                                                 END,
+                     request_pending = CASE 
+                                       WHEN INSERTED.request_to_stop = 1 THEN 0 
+                                       ELSE INSERTED.request_pending 
+                                   END
                  FROM read_data INNER JOIN INSERTED ON read_data.id = INSERTED.id;
              END
          END;
