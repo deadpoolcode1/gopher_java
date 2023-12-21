@@ -89,6 +89,7 @@ public class MessageListener implements SerialPortMessageListener {
                     }
                     else {
                         // GOPHER usage
+                        //check if the specific port is opened, if so then decode the message and save it to the database
                         Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
                     }
 

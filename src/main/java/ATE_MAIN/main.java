@@ -220,8 +220,6 @@ public class main {
         // an ATE IP address on the "172.20.x.x" subnet to allow streaming listeners
         adt_ate_radio_address_string = (String)parameters.get("ATE_RADIO_IP_address_ADT");
         gdt_ate_radio_address_string = (String)parameters.get("ATE_RADIO_IP_address_GDT");
-        // add here an init for the FileWriters object to allow for json record writes to store sent out messages recordings (GOPHER use)
-        // see CMN_GD for these object declarations
         return;
     }
 
