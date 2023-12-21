@@ -9,8 +9,15 @@ import LMDS_ICD.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import com.fazecast.jSerialComm.SerialPortMessageListener;
+import com.google.gson.Gson;
+import com.yourcompany.app.Database;
+import com.yourcompany.app.MConfig;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class MessageListener implements SerialPortMessageListener {
     static final int MAX_LENGTH = 248;
@@ -90,7 +97,13 @@ public class MessageListener implements SerialPortMessageListener {
                     else {
                         // GOPHER usage
                         //check if the specific port is opened, if so then decode the message and save it to the database
+                        String checkRequestPendingQuery = "SELECT TOP 1 request_pending FROM read_data WHERE com = '" + port_name + "' AND request_pending = 1 ORDER BY timestamp_pending_issued DESC";
+                        List<String> requestPendingResult = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+
+                        if (!requestPendingResult.isEmpty() && "1".equals(requestPendingResult.get(0))) {
+                        // The conditions are met, so call the Decode_Msg_Into_Json_String function
                         Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+                        } 
                     }
 
                 } else {
@@ -100,14 +113,154 @@ public class MessageListener implements SerialPortMessageListener {
         }
     }
 
-    private void Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
-       // GOPHER use
-        // select the file writer for this port IAW with the port index
-        // convert the lm header class instance to a json string and save it to the file
-        // decode the message into its LMDS_ICD class instance using mr, msg
-        // convert the class instance to a json string nd save it to the file
-        // consider error conditions
+    private Pair<String, String> Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
+    Gson gson = new Gson();
+    String headerJsonString = gson.toJson(lm);
+    String bodyJsonString = "{}";
+
+    switch (lm.msg_code) {
+        case MSG_CODE_DS_CNTRL:
+            // Handle DS Control message
+            break;
+        case MSG_CODE_CMND_RSPNS:
+            UUT_rspns rspns = new UUT_rspns(mr);
+            bodyJsonString = gson.toJson(rspns);
+            break;
+        case MSG_CODE_EO_CNTRL:
+            // Handle EO Control message
+            break;
+        case MSG_CODE_EO_STTS:
+            // Handle EO Status message
+            break;
+        case MSG_CODE_VDO_ENC_CNTRL:
+            // Handle Video Encoder Control message
+            break;
+        case MSG_CODE_VDO_ENC_STTS:
+            // Handle Video Encoder Status message
+            break;
+        case MSG_CODE_PRPLSN_CNTRL:
+            // Handle Propulsion Control message
+            break;
+        case MSG_CODE_PRPLSN_STTS:
+            // Handle Propulsion Status message
+            break;
+        case MSG_CODE_INT_COMM_TST_RSLTS:
+            // Handle Internal Communication Test Results message
+            break;
+        case MSG_CODE_PWR_MSRMNT:
+            // Handle Power Measurement message
+            break;
+        case MSG_CODE_AIR_DATA:
+            air_data airData = new air_data(mr);
+            bodyJsonString = gson.toJson(airData);
+            break;
+        case MSG_CODE_VDO_FPS:
+            // Handle Video FPS message
+            break;
+        case MSG_CODE_SER_COMM_TST:
+            // Handle Serial Communication Test message
+            break;
+        case MSG_CODE_INT_SER_COMM_TST:
+            // Handle Internal Serial Communication Test message
+            break;
+        case MSG_CODE_TEMP_MSRMNTS:
+            // Handle Temperature Measurements message
+            break;
+        case MSG_CODE_PWM_CNTRL_STTS:
+            // Handle PWM Control Status message
+            break;
+        case MSG_CODE_DSCRT_CNTRL:
+            // Handle Discrete Control message
+            break;
+        case MSG_CODE_DSCRT_STTS:
+            // Handle Discrete Status message
+            break;
+        case MSG_CODE_SET_VDO_ANNOT:
+            // Handle Set Video Annotation message
+            break;
+        case MSG_CODE_TX_FUZE:
+            // Handle Transmit Fuze message
+            break;
+        case MSG_CODE_RX_FUZE:
+            // Handle Receive Fuze message
+            break;
+        case MSG_CODE_TX_GPS_UBLOX:
+            // Handle Transmit GPS Ublox message
+            break;
+        case MSG_CODE_RX_GPS_UBLOX:
+            // Handle Receive GPS Ublox message
+            break;
+        case MSG_CODE_TX_SAASM:
+            // Handle Transmit SAASM message
+            break;
+        case MSG_CODE_RX_SAASM:
+            // Handle Receive SAASM message
+            break;
+        case MSG_CODE_TEXT:
+            TextMsg textMsg = new TextMsg(mr);
+            bodyJsonString = gson.toJson(textMsg);
+            break;
+        case MSG_CODE_TX_AHRS:
+            // Handle Transmit AHRS message
+            break;
+        case MSG_CODE_RX_AHRS:
+            // Handle Receive AHRS message
+            break;
+        case MSG_CODE_BATTERY_STTS:
+            // Handle Battery Status message
+            break;
+        case MSG_CODE_TX_GPS_MPU:
+            // Handle Transmit GPS MPU message
+            break;
+        case MSG_CODE_RX_GPS_MPU:
+            // Handle Receive GPS MPU message
+            break;
+        case MSG_CODE_TX_JPM_TL:
+            // Handle Transmit JPM TL message
+            break;
+        case MSG_CODE_RX_JPM_TL:
+            // Handle Receive JPM TL message
+            break;
+        case MSG_CODE_TX_JPM_CONTROL:
+            // Handle Transmit JPM Control message
+            break;
+        case MSG_CODE_RX_JPM_CONTROL:
+            // Handle Receive JPM Control message
+            break;
+        case MSG_CODE_TX_CAMERA:
+            // Handle Transmit Camera message
+            break;
+        case MSG_CODE_RX_CAMERA:
+            // Handle Receive Camera message
+            break;
+        case MSG_CODE_TX_MCM:
+            // Handle Transmit MCM message
+            break;
+        case MSG_CODE_RX_MCM:
+            // Handle Receive MCM message
+            break;
+        case MSG_CODE_WRITE_GET_CNFG_PARAM:
+            // Handle Write/Get Configuration Parameter message
+            break;
+        case MSG_CODE_READ_CNFG_PARAM:
+            // Handle Read Configuration Parameter message
+            break;
+        case MSG_CODE_SAVE_ALL_CNFG_PARAMS:
+            // Handle Save All Configuration Parameters message
+            break;
+        case MSG_CODE_GET_DS_REVSN:
+            DS_Revision dsRev = new DS_Revision(mr);
+            bodyJsonString = gson.toJson(dsRev);
+            break;
+        case MSG_CODE_UNKNOWN:
+        default:
+            System.out.println("Unknown message code: " + lm.msg_code);
+            break;
     }
+    
+
+    return new ImmutablePair<>(headerJsonString, bodyJsonString);
+}
 
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX
