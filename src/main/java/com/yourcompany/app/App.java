@@ -2,7 +2,9 @@ package com.yourcompany.app;
 
 
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class App {
 
@@ -41,8 +43,24 @@ public class App {
         }
     }
 
+        private static Map<String, String> parseArguments(String[] args) {
+        Map<String, String> argMap = new HashMap<>();
+        for (int i = 0; i < args.length; i += 2) {
+            if (args[i].startsWith("--") && i + 1 < args.length) {
+                argMap.put(args[i].substring(2), args[i + 1]);
+            }
+        }
+        return argMap;
+    }
     public static void main(String[] args) {
-        MConfig.initialize("config.json");
+            Map<String, String> argMap = parseArguments(args);
+
+            String dbServer = argMap.getOrDefault("dbServer", "defaultServer");
+            String dbUsername = argMap.getOrDefault("dbUsername", "defaultUsername");
+            String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
+
+            // Initialize MConfig with parsed arguments
+            MConfig.initialize(dbServer, dbUsername, dbPassword);
         if (!unittest()) {
             System.exit(1); // Exit with error code if unittest fails
         }
