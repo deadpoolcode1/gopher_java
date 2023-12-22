@@ -18,6 +18,8 @@ import ATE_GUI.PCM_GUI.PCM_PeriodicATE_Task;
 import ATE_GUI.PCM_GUI.PCM_TestSelect;
 import LMDS_ICD.*;
 import com.fazecast.jSerialComm.SerialPort;
+import com.google.gson.Gson;
+
 import main.java.ip_radio_interface.IP_RADIO_PeriodicATE_Task;
 import org.jfree.chart.ChartPanel;
 import org.json.simple.JSONArray;
@@ -43,10 +45,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import com.yourcompany.app.App;
+import com.yourcompany.app.Database;
 import com.yourcompany.app.MConfig;
+import java.util.List;
 
 public class main {
     /**
@@ -176,10 +182,42 @@ public class main {
     }
 
     private static void InitGOPHER_Sender() {
-        // GOPHER use
-        // initalize a periodic task to read from the data base messages destined to the LMDS, decode them and send to the LMDS (see task creation example in InitLAN_Port() below)
-        // the task should periodically scan the data base for out-going messages, convert them from JSON to LMDS_ICD class instance and use the "SendMessage" method to send it out
-        // an out going message must define all header fields, a message body and a port
+        Gson gson = new Gson();
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                // Query the database for outgoing messages
+                String query = "SELECT id, port_index, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
+                List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+                for (String[] dataParts : messages) {
+                    int id = Integer.parseInt(dataParts[0]);
+                    int portIndex = Integer.parseInt(dataParts[1]);
+                    EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(dataParts[2]);
+                    EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(dataParts[3]);
+                    EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(dataParts[4]);
+                    EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(dataParts[5]);
+                    EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(dataParts[6]);
+    
+                    Address destAddress = new Address();
+                    destAddress.host_name = destHostName;
+                    destAddress.process_name = destProcessName;
+    
+                    Address sendAddress = new Address();
+                    sendAddress.host_name = sendHostName;
+                    sendAddress.process_name = sendProcessName;
+    
+                    // Assuming the MessageBody class has a method to deserialize specific message types
+                    MessageBody body = gson.fromJson(dataParts[7], MessageBody.class); // Adjust as necessary to match the actual message class
+    
+                    SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
+    
+                    String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
+                    Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, 1, TimeUnit.SECONDS); // Adjust the period according to your needs
     }
 
     private static void InitPeriodicalTasks() throws URISyntaxException, IOException, ParseException {

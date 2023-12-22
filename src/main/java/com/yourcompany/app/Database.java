@@ -32,6 +32,28 @@ public class Database {
         }
     }
 
+    public static List<String[]> executeQueryMulti(String dbName, String query, String server, String username, String password) {
+        List<String[]> results = new ArrayList<>();
+        try (Connection conn = connectToDatabase(server, username, password);
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("USE " + dbName);
+            ResultSet rs = stmt.executeQuery(query);
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            while (rs.next()) {
+                String[] row = new String[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
+                    row[i - 1] = rs.getString(i);
+                }
+                results.add(row);
+            }
+        } catch (SQLException e) {
+            showSQLError(e);
+        }
+        return results;
+    }
+    
     public static List<String> executeQuery(String dbName, String query, String server, String username, String password) {
         List<String> results = new ArrayList<>();
         try (Connection conn = connectToDatabase(server, username, password);
