@@ -29,6 +29,7 @@ public class Config {
         defaultConfig.put("DB_SERVER", "localhost");
         defaultConfig.put("DB_USERNAME", "SA");
         defaultConfig.put("DB_PASSWORD", "Ss6399812");
+        defaultConfig.put("FAKEDATABASE", false); // Add default FAKEDATABASE parameter
 
         Files.write(Paths.get(configFilePath), defaultConfig.toString(4).getBytes(), StandardOpenOption.CREATE);
         System.out.println("Created default config file.");
@@ -44,5 +45,10 @@ public class Config {
 
     public static String getDBPassword() {
         return configData.optString("DB_PASSWORD", "default_password");
+    }
+
+    // Add a method to retrieve the FAKEDATABASE value
+    public static boolean getFakeDatabase() {
+        return configData.optBoolean("FAKEDATABASE", false);
     }
 }

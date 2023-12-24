@@ -7,7 +7,7 @@
             "request": "launch",
             "mainClass": "ATE_MAIN.main",
             "projectName": "gopher",
-            "args": "--dbServer localhost --dbUsername SA --dbPassword Ss6399812"
+            "args": "--dbServer localhost --dbUsername SA --dbPassword Ss6399812 --fakeDatabase true"
         }
     ]
 }

@@ -103,9 +103,9 @@ public class main {
             String dbServer = argMap.getOrDefault("dbServer", "defaultServer");
             String dbUsername = argMap.getOrDefault("dbUsername", "defaultUsername");
             String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
+            boolean fakeDatabase = Boolean.parseBoolean(argMap.getOrDefault("fakeDatabase", "false"));
 
-            // Initialize MConfig with parsed arguments
-            MConfig.initialize(dbServer, dbUsername, dbPassword);
+            MConfig.initialize(dbServer, dbUsername, dbPassword, fakeDatabase);
 
             if (!App.unittest()) {
                 System.exit(1); // Exit if the unit test fails
