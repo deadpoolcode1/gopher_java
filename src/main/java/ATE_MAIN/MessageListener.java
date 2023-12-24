@@ -135,149 +135,86 @@ public class MessageListener implements SerialPortMessageListener {
     
 
     private Pair<String, String> Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
-    Gson gson = new Gson();
-    String headerJsonString = gson.toJson(lm);
-    String bodyJsonString = "{}";
-
-    switch (lm.msg_code) {
-        case MSG_CODE_DS_CNTRL:
-            // Handle DS Control message
-            break;
-        case MSG_CODE_CMND_RSPNS:
-            UUT_rspns rspns = new UUT_rspns(mr);
-            bodyJsonString = gson.toJson(rspns);
-            break;
-        case MSG_CODE_EO_CNTRL:
-            // Handle EO Control message
-            break;
-        case MSG_CODE_EO_STTS:
-            // Handle EO Status message
-            break;
-        case MSG_CODE_VDO_ENC_CNTRL:
-            // Handle Video Encoder Control message
-            break;
-        case MSG_CODE_VDO_ENC_STTS:
-            // Handle Video Encoder Status message
-            break;
-        case MSG_CODE_PRPLSN_CNTRL:
-            // Handle Propulsion Control message
-            break;
-        case MSG_CODE_PRPLSN_STTS:
-            // Handle Propulsion Status message
-            break;
-        case MSG_CODE_INT_COMM_TST_RSLTS:
-            // Handle Internal Communication Test Results message
-            break;
-        case MSG_CODE_PWR_MSRMNT:
-            // Handle Power Measurement message
-            break;
-        case MSG_CODE_AIR_DATA:
-            air_data airData = new air_data(mr);
-            bodyJsonString = gson.toJson(airData);
-            break;
-        case MSG_CODE_VDO_FPS:
-            // Handle Video FPS message
-            break;
-        case MSG_CODE_SER_COMM_TST:
-            // Handle Serial Communication Test message
-            break;
-        case MSG_CODE_INT_SER_COMM_TST:
-            // Handle Internal Serial Communication Test message
-            break;
-        case MSG_CODE_TEMP_MSRMNTS:
-            // Handle Temperature Measurements message
-            break;
-        case MSG_CODE_PWM_CNTRL_STTS:
-            // Handle PWM Control Status message
-            break;
-        case MSG_CODE_DSCRT_CNTRL:
-            // Handle Discrete Control message
-            break;
-        case MSG_CODE_DSCRT_STTS:
-            // Handle Discrete Status message
-            break;
-        case MSG_CODE_SET_VDO_ANNOT:
-            // Handle Set Video Annotation message
-            break;
-        case MSG_CODE_TX_FUZE:
-            // Handle Transmit Fuze message
-            break;
-        case MSG_CODE_RX_FUZE:
-            // Handle Receive Fuze message
-            break;
-        case MSG_CODE_TX_GPS_UBLOX:
-            // Handle Transmit GPS Ublox message
-            break;
-        case MSG_CODE_RX_GPS_UBLOX:
-            // Handle Receive GPS Ublox message
-            break;
-        case MSG_CODE_TX_SAASM:
-            // Handle Transmit SAASM message
-            break;
-        case MSG_CODE_RX_SAASM:
-            // Handle Receive SAASM message
-            break;
-        case MSG_CODE_TEXT:
-            TextMsg textMsg = new TextMsg(mr);
-            bodyJsonString = gson.toJson(textMsg);
-            break;
-        case MSG_CODE_TX_AHRS:
-            // Handle Transmit AHRS message
-            break;
-        case MSG_CODE_RX_AHRS:
-            // Handle Receive AHRS message
-            break;
-        case MSG_CODE_BATTERY_STTS:
-            // Handle Battery Status message
-            break;
-        case MSG_CODE_TX_GPS_MPU:
-            // Handle Transmit GPS MPU message
-            break;
-        case MSG_CODE_RX_GPS_MPU:
-            // Handle Receive GPS MPU message
-            break;
-        case MSG_CODE_TX_JPM_TL:
-            // Handle Transmit JPM TL message
-            break;
-        case MSG_CODE_RX_JPM_TL:
-            // Handle Receive JPM TL message
-            break;
-        case MSG_CODE_TX_JPM_CONTROL:
-            // Handle Transmit JPM Control message
-            break;
-        case MSG_CODE_RX_JPM_CONTROL:
-            // Handle Receive JPM Control message
-            break;
-        case MSG_CODE_TX_CAMERA:
-            // Handle Transmit Camera message
-            break;
-        case MSG_CODE_RX_CAMERA:
-            // Handle Receive Camera message
-            break;
-        case MSG_CODE_TX_MCM:
-            // Handle Transmit MCM message
-            break;
-        case MSG_CODE_RX_MCM:
-            // Handle Receive MCM message
-            break;
-        case MSG_CODE_WRITE_GET_CNFG_PARAM:
-            // Handle Write/Get Configuration Parameter message
-            break;
-        case MSG_CODE_READ_CNFG_PARAM:
-            // Handle Read Configuration Parameter message
-            break;
-        case MSG_CODE_SAVE_ALL_CNFG_PARAMS:
-            // Handle Save All Configuration Parameters message
-            break;
-        case MSG_CODE_GET_DS_REVSN:
-            DS_Revision dsRev = new DS_Revision(mr);
-            bodyJsonString = gson.toJson(dsRev);
-            break;
-        case MSG_CODE_UNKNOWN:
-        default:
-            System.out.println("Unknown message code: " + lm.msg_code);
-            break;
+        Gson gson = new Gson();
+        String headerJsonString = gson.toJson(lm);
+        String bodyJsonString = "{}";  // Default empty JSON object
+    
+        switch (lm.msg_code) {
+            case MSG_CODE_CMND_RSPNS:
+                UUT_rspns rspns = new UUT_rspns(mr);
+                bodyJsonString = gson.toJson(rspns);
+                break;
+            case MSG_CODE_GET_DS_REVSN:
+                DS_Revision dsRev = new DS_Revision(mr);
+                bodyJsonString = gson.toJson(dsRev);
+                break;
+            case MSG_CODE_TEMP_MSRMNTS:
+                temp_msrmnts tempMsrmnts = new temp_msrmnts(mr);
+                bodyJsonString = gson.toJson(tempMsrmnts);
+                break;
+            case MSG_CODE_DSCRT_STTS:
+                dscrt_stts dscrtStts = new dscrt_stts(mr);
+                bodyJsonString = gson.toJson(dscrtStts);
+                break;
+            case MSG_CODE_PWR_MSRMNT:
+                pwr_sgnals_msrmnts pwrMsrmnts = new pwr_sgnals_msrmnts(mr);
+                bodyJsonString = gson.toJson(pwrMsrmnts);
+                break;
+            case MSG_CODE_AIR_DATA:
+                air_data airData = new air_data(mr);
+                bodyJsonString = gson.toJson(airData);
+                break;
+            case MSG_CODE_TEXT:
+                TextMsg textMsg = new TextMsg(mr);
+                bodyJsonString = gson.toJson(textMsg);
+                break;
+            case MSG_CODE_SER_COMM_TST:
+                srial_comms_tst sct = new srial_comms_tst(mr);
+                bodyJsonString = gson.toJson(sct);
+                break;            
+            case MSG_CODE_INT_COMM_TST_RSLTS:
+            case MSG_CODE_EO_STTS:
+            case MSG_CODE_VDO_ENC_CNTRL:
+            case MSG_CODE_VDO_ENC_STTS:
+            case MSG_CODE_PRPLSN_CNTRL:
+            case MSG_CODE_PRPLSN_STTS:
+            case MSG_CODE_VDO_FPS:
+            case MSG_CODE_INT_SER_COMM_TST:
+            case MSG_CODE_PWM_CNTRL_STTS:
+            case MSG_CODE_DSCRT_CNTRL:
+            case MSG_CODE_SET_VDO_ANNOT:
+            case MSG_CODE_TX_FUZE:
+            case MSG_CODE_RX_FUZE:
+            case MSG_CODE_TX_GPS_UBLOX:
+            case MSG_CODE_RX_GPS_UBLOX:
+            case MSG_CODE_TX_SAASM:
+            case MSG_CODE_RX_SAASM:
+            case MSG_CODE_TX_AHRS:
+            case MSG_CODE_RX_AHRS:
+            case MSG_CODE_BATTERY_STTS:
+            case MSG_CODE_TX_GPS_MPU:
+            case MSG_CODE_RX_GPS_MPU:
+            case MSG_CODE_TX_JPM_TL:
+            case MSG_CODE_RX_JPM_TL:
+            case MSG_CODE_TX_JPM_CONTROL:
+            case MSG_CODE_RX_JPM_CONTROL:
+            case MSG_CODE_TX_CAMERA:
+            case MSG_CODE_RX_CAMERA:
+            case MSG_CODE_TX_MCM:
+            case MSG_CODE_RX_MCM:
+            case MSG_CODE_WRITE_GET_CNFG_PARAM:
+            case MSG_CODE_READ_CNFG_PARAM:
+            case MSG_CODE_SAVE_ALL_CNFG_PARAMS:
+            case MSG_CODE_UNKNOWN:
+            default:
+                // Implement other message types as needed
+                System.out.println("Unknown or unhandled message code: " + lm.msg_code);
+                break;
+        }
+    
+        return new ImmutablePair<>(headerJsonString, bodyJsonString);
     }
+    
     
 
     return new ImmutablePair<>(headerJsonString, bodyJsonString);
