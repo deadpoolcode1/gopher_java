@@ -171,43 +171,17 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_SER_COMM_TST:
                 srial_comms_tst sct = new srial_comms_tst(mr);
                 bodyJsonString = gson.toJson(sct);
-                break;            
-            case MSG_CODE_INT_COMM_TST_RSLTS:
-            case MSG_CODE_EO_STTS:
-            case MSG_CODE_VDO_ENC_CNTRL:
-            case MSG_CODE_VDO_ENC_STTS:
-            case MSG_CODE_PRPLSN_CNTRL:
-            case MSG_CODE_PRPLSN_STTS:
-            case MSG_CODE_VDO_FPS:
-            case MSG_CODE_INT_SER_COMM_TST:
-            case MSG_CODE_PWM_CNTRL_STTS:
-            case MSG_CODE_DSCRT_CNTRL:
-            case MSG_CODE_SET_VDO_ANNOT:
-            case MSG_CODE_TX_FUZE:
-            case MSG_CODE_RX_FUZE:
+                break;
             case MSG_CODE_TX_GPS_UBLOX:
-            case MSG_CODE_RX_GPS_UBLOX:
-            case MSG_CODE_TX_SAASM:
-            case MSG_CODE_RX_SAASM:
+                GPS_UBX_NAV gpsNav = new GPS_UBX_NAV(mr);
+                bodyJsonString = gson.toJson(gpsNav);
+                break;
             case MSG_CODE_TX_AHRS:
-            case MSG_CODE_RX_AHRS:
-            case MSG_CODE_BATTERY_STTS:
-            case MSG_CODE_TX_GPS_MPU:
-            case MSG_CODE_RX_GPS_MPU:
-            case MSG_CODE_TX_JPM_TL:
-            case MSG_CODE_RX_JPM_TL:
-            case MSG_CODE_TX_JPM_CONTROL:
-            case MSG_CODE_RX_JPM_CONTROL:
-            case MSG_CODE_TX_CAMERA:
-            case MSG_CODE_RX_CAMERA:
-            case MSG_CODE_TX_MCM:
-            case MSG_CODE_RX_MCM:
-            case MSG_CODE_WRITE_GET_CNFG_PARAM:
-            case MSG_CODE_READ_CNFG_PARAM:
-            case MSG_CODE_SAVE_ALL_CNFG_PARAMS:
+                AHRS_System ahrsSystem = new AHRS_System(mr);
+                bodyJsonString = gson.toJson(ahrsSystem);
+                break;
             case MSG_CODE_UNKNOWN:
             default:
-                // Implement other message types as needed
                 System.out.println("Unknown or unhandled message code: " + lm.msg_code);
                 break;
         }
@@ -215,10 +189,6 @@ public class MessageListener implements SerialPortMessageListener {
         return new ImmutablePair<>(headerJsonString, bodyJsonString);
     }
     
-    
-
-    return new ImmutablePair<>(headerJsonString, bodyJsonString);
-}
 
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX
