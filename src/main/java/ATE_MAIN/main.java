@@ -167,7 +167,7 @@ public class main {
         if(CMN_GD.ATE_SIM_MODE)
             InitPeriodicalTasks();
         InitLAN_Port();
-        if(! CMN_GD.ATE_SIM_MODE)
+        if(! CMN_GD.ATE_SIM_MODE && !MConfig.getFakeDatabase())
             InitGOPHER_Sender();
         //sleep for 10 hours and then exit
         try {
