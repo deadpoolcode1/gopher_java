@@ -113,3 +113,43 @@ source ~/.bashrc
 
 mvn install:install-file -Dfile=/home/administrator/java/gopher/IP_Radio_Interface.jar -DgroupId=local -DartifactId=ip-radio-interface -Dversion=1.0 -Dpackaging=jar
 
+
+## Release notes
+
+### version 1.20
+'''
+New Features:
+Conditional Logging for Incoming and Outgoing LMDS Messages:
+Incoming Messages: The system now records incoming LMDS messages when in simulated mode, enhancing debugging and system monitoring.
+Outgoing Messages: Added functionality to record outgoing LMDS messages in a JSON format. Each message is logged with a unique log number for easy tracking and reference.
+Both features are conditional on the MConfig.getFakeDatabase() setting, which is designed for use in testing environments.
+Enhancements:
+Centralized Logging:
+
+Both incoming and outgoing messages are logged with detailed information, including headers and message bodies, in a structured JSON format.
+Efficient Logging Mechanism:
+
+Consecutive messages with the same msg_code are not logged to prevent redundancy, ensuring that the logs are concise and relevant.
+How to Run:
+Activating Logging:
+To enable logging for both incoming and outgoing messages, ensure the system is configured to use a fake database by setting the fakeDatabase parameter to true.
+No additional runtime parameters are needed. The system automatically starts logging based on the configuration.
+What Will It Log:
+Incoming Messages (Simulated Mode):
+
+Log entries for incoming messages include details such as message length, checksum validity, and the entire message content in a human-readable format.
+Files are named according to the port they are associated with, following the pattern <port_name>.txt.
+Outgoing Messages:
+
+Each log entry contains:
+log_number: A sequential identifier for each log entry.
+LMDS_HDR: The header of the LMDS message in JSON format.
+MessageBody: The body of the LMDS message in JSON format.
+Files are named outgoing_lmds<portIx>.txt where <portIx> is the index of the port used.
+File Location:
+Logs are stored in the running directory of the application.
+Incoming messages are logged to files named after their respective ports.
+Outgoing messages are logged to files named outgoing_lmds<portIx>.txt.
+Important Notes:
+The logging feature is primarily intended for development and testing. Continuous logging in a production environment might impact performance and disk usage.
+'''
