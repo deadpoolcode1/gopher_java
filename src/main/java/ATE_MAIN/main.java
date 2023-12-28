@@ -38,6 +38,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -348,7 +349,32 @@ public class main {
     }
 
     private static void Record_Out_Message_In_Json(int portIx, LMDS_HDR lh, MessageBody msg_body) {
-        // GOPHER use - add code to record in Json messages sent to LMDS (for gopher tester)
+        if (MConfig.getFakeDatabase()) {
+            String fileName = "outgoing_lmds" + portIx + ".txt";
+            Gson gson = new Gson();
+            String jsonHeader = gson.toJson(lh);
+            String jsonBody = gson.toJson(msg_body);
+
+            int logNumber = MessageListener.getNextLogNumber(fileName);
+
+            boolean shouldAppend = true;
+            try {
+                List<String> lines = Files.readAllLines(Paths.get(fileName));
+                if (!lines.isEmpty()) {
+                    String lastLine = lines.get(lines.size() - 1);
+                    if (lastLine.contains("\"msg_code\":\"" + lh.msg_code + "\"")) {
+                        shouldAppend = false;
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (shouldAppend) {
+                String logEntry = "log_number:" + logNumber + "=LMDS_HDR: " + jsonHeader + ", MessageBody: " + jsonBody;
+                MessageListener.appendToLogFile(fileName, logEntry, logNumber);
+            }
+        }
     }
 
     public static Address GetNewAddress(EnDef.host_name_ce host, EnDef.process_name_ce process) {

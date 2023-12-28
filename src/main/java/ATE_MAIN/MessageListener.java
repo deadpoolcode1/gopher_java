@@ -109,7 +109,7 @@ public class MessageListener implements SerialPortMessageListener {
         }
     }
 
-    private synchronized int getNextLogNumber(String fileName) {
+    public static  synchronized int getNextLogNumber(String fileName) {
         // Synchronized to avoid concurrent access issues
         try {
             File file = new File(fileName);
@@ -130,7 +130,7 @@ public class MessageListener implements SerialPortMessageListener {
         }
     }
     
-    private void appendToLogFile(String fileName, String message, int logNumber) {
+    public static void appendToLogFile(String fileName, String message, int logNumber) {
         try (FileWriter fw = new FileWriter(fileName, true);
              BufferedWriter bw = new BufferedWriter(fw);
              PrintWriter out = new PrintWriter(bw)) {
