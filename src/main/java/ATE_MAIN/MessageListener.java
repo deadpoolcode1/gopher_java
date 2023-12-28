@@ -1,6 +1,5 @@
 package ATE_MAIN;
 
-
 import ATE_GUI.JPM_GUI.JPM_TestSelect;
 import ATE_GUI.LUMO_GUI.LUMO_TestSelect;
 import ATE_GUI.MPU_GUI.MPU_TestSelect;
@@ -18,16 +17,19 @@ import java.util.List;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import java.io.*;
+import java.nio.file.*;
 
 public class MessageListener implements SerialPortMessageListener {
     static final int MAX_LENGTH = 248;
-    final static int MSG_FRAME_SIZE = 32+8; // header + tail
-    // a class based on the jSerial data comm package. Tests receiving and serializing UUT LMDS messages
+    final static int MSG_FRAME_SIZE = 32 + 8; // header + tail
+    // a class based on the jSerial data comm package. Tests receiving and
+    // serializing UUT LMDS messages
     static int cnt = 0;
     int TEST_MSG_SIZE = new TestMsg().GetSize();
     int TEXT_MSG_SIZE = new TextMsg().GetSize();
     int port_index = -1;
-    static byte[] delimiter = {(byte) 0xca, (byte) 0xfe, (byte) 0x2d, (byte) 0xad};
+    static byte[] delimiter = { (byte) 0xca, (byte) 0xfe, (byte) 0x2d, (byte) 0xad };
 
     public MessageListener(int port_index) {
         this.port_index = port_index;
@@ -54,36 +56,38 @@ public class MessageListener implements SerialPortMessageListener {
         byte[] msg = event.getReceivedData();
         String port_name = event.getSerialPort().getSystemPortName();
         int ml = msg.length;
-    
+
         // Handle invalid message lengths early
         if (ml > MAX_LENGTH || ml < MSG_FRAME_SIZE) {
-            System.out.println(port_name + " RX" + cnt + "Received msg too large or too small, ignored. Length: " + msg.length);
+            System.out.println(
+                    port_name + " RX" + cnt + "Received msg too large or too small, ignored. Length: " + msg.length);
             return;
         }
-    
+
         MsgRdr MR = new MsgRdr(msg);
         LMDS_HDR LM = new LMDS_HDR(MR);
-        
+
         // Check if message length is less than buffer length
         if (LM.length > ml) {
             System.out.println("MessageListener: " + port_name + " RX" + cnt +
-                    " Received msg length in header < buffer length. HDR Length=" + LM.length + "  RX Buffer length=" + ml);
+                    " Received msg length in header < buffer length. HDR Length=" + LM.length + "  RX Buffer length="
+                    + ml);
             return;
         }
-    
+
         MsgTail MT = new MsgTail(msg, LM.length - 8);
         if (!MT.IsGoodChecksum(msg, LM.length)) {
             System.out.println(port_name + " RX" + cnt + "Received msg has bad checksum. ignored.");
             return;
         }
-    
+
         if (CMN_GD.ATE_SIM_MODE) {
             processSimulatedModeMessages(MR, LM, msg, port_name);
         } else {
             processRealModeMessages(port_name, MR, LM, msg);
         }
     }
-    
+
     private void processSimulatedModeMessages(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         switch (LM.dest_address.process_name) {
             case PR_ATE_TF1:
@@ -104,41 +108,98 @@ public class MessageListener implements SerialPortMessageListener {
                         LM.dest_address.process_name);
         }
     }
+
+    private synchronized int getNextLogNumber(String fileName) {
+        // Synchronized to avoid concurrent access issues
+        try {
+            File file = new File(fileName);
+            if (!file.exists()) {
+                return 1; // start from 1 if the file doesn't exist
+            }
+            List<String> lines = Files.readAllLines(file.toPath());
+            if (lines.isEmpty()) {
+                return 1;
+            }
+            String lastLine = lines.get(lines.size() - 1);
+            String[] parts = lastLine.split("=");
+            int lastLogNumber = Integer.parseInt(parts[0].substring(11)); // extracts the number after "log_number:"
+            return lastLogNumber + 1;
+        } catch (IOException | NumberFormatException e) {
+            e.printStackTrace();
+            return 1; // default to 1 on any error
+        }
+    }
+    
+    private void appendToLogFile(String fileName, String message, int logNumber) {
+        try (FileWriter fw = new FileWriter(fileName, true);
+             BufferedWriter bw = new BufferedWriter(fw);
+             PrintWriter out = new PrintWriter(bw)) {
+            out.println("log_number:" + logNumber + "=" + message + "\r\n");
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
     
     private void processRealModeMessages(String port_name, MsgRdr MR, LMDS_HDR LM, byte[] msg) {
         if (MConfig.getFakeDatabase()) {
             Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
-            System.out.println("Decoded Message: " + decodedMessage.getLeft() + decodedMessage.getRight());
-            return;
+            String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
+    
+            // Determine the file name and log number
+            String fileName = port_name + ".txt";
+            int logNumber = getNextLogNumber(fileName);
+    
+            // Read the last message from the file to compare msg_code
+            boolean shouldAppend = true;
+            try {
+                List<String> lines = Files.readAllLines(Paths.get(fileName));
+                if (!lines.isEmpty()) {
+                    String lastLine = lines.get(lines.size() - 1);
+                    if (lastLine.contains("msg_code=" + LM.msg_code)) { // adjust based on how msg_code is represented
+                        shouldAppend = false; // Don't append if the last message is of the same type
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+    
+            // Append to log file if conditions are met
+            if (shouldAppend) {
+                appendToLogFile(fileName, concatenatedJson, logNumber);
+            }
+        } else {
+            String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + port_name
+                    + "' ORDER BY timestamp_pending_issued DESC";
+            List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
+                    MConfig.getDBUsername(), MConfig.getDBPassword());
+    
+            if (requestData.isEmpty()) {
+                return;
+            }
+    
+            String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
+            String readDataId = dataParts[0];
+            String requestPending = dataParts[1];
+    
+            if (!"1".equals(requestPending)) {
+                return;
+            }
+    
+            Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+            String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
+            String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '"
+                    + concatenatedJson + "')";
+            Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(),
+                    MConfig.getDBPassword());
         }
-    
-        String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + port_name + "' ORDER BY timestamp_pending_issued DESC";
-        List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
-    
-        if (requestData.isEmpty()) {
-            return;
-        }
-    
-        String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
-        String readDataId = dataParts[0];
-        String requestPending = dataParts[1];
-    
-        if (!"1".equals(requestPending)) {
-            return;
-        }
-    
-        Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
-        String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-        String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '" + concatenatedJson + "')";
-        Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
     }
     
 
     private Pair<String, String> Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
         Gson gson = new Gson();
         String headerJsonString = gson.toJson(lm);
-        String bodyJsonString = "{}";  // Default empty JSON object
-    
+        String bodyJsonString = "{}"; // Default empty JSON object
+
         switch (lm.msg_code) {
             case MSG_CODE_CMND_RSPNS:
                 UUT_rspns rspns = new UUT_rspns(mr);
@@ -185,13 +246,13 @@ public class MessageListener implements SerialPortMessageListener {
                 System.out.println("Unknown or unhandled message code: " + lm.msg_code);
                 break;
         }
-    
+
         return new ImmutablePair<>(headerJsonString, bodyJsonString);
     }
-    
 
     public static void Process_TF4_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
-        // process messages from the JPM UUT; may be called by either the LAN Rx or Serial port RX
+        // process messages from the JPM UUT; may be called by either the LAN Rx or
+        // Serial port RX
         int rx_body_size = msg.length - (LM.GetSize() + 8);
         switch (LM.msg_code) {
             case MSG_CODE_CMND_RSPNS:
@@ -213,7 +274,7 @@ public class MessageListener implements SerialPortMessageListener {
                 break;
             case MSG_CODE_DSCRT_STTS:
                 dscrt_stts DST = new dscrt_stts(MR);
-               for (int i = 0; i < DST.dscrt_states.length; i++) {
+                for (int i = 0; i < DST.dscrt_states.length; i++) {
                     switch (DST.dscrt_states[i].dscrt_id) {
                         case JPM_DSCRT_IN_MCU_HW_RST_INHIBIT:
                             JPM_GD.MCU_HW_RST_INHIBIT = DST.dscrt_states[i].dscrt_val.ordinal();
@@ -230,7 +291,7 @@ public class MessageListener implements SerialPortMessageListener {
                         case JPM_DSCRT_IN_VPU_GP4:
                             JPM_GD.VPU_GP4 = DST.dscrt_states[i].dscrt_val.ordinal();
                             break;
-                            // GPIO11, 12 used for testing only
+                        // GPIO11, 12 used for testing only
                         case JPM_DSCRT_IN_GPIO11:
                             JPM_GD.GPIO11 = DST.dscrt_states[i].dscrt_val.ordinal();
                         case JPM_DSCRT_IN_GPIO12:
@@ -239,14 +300,16 @@ public class MessageListener implements SerialPortMessageListener {
                         case DSCRT_UNKNOWN:
                             break; // Some fields may not be populated.
                         default:
-                            System.out.println("Process_TF4_Msgs - unknown discrete report: "+DST.dscrt_states[i].dscrt_id);
+                            System.out.println(
+                                    "Process_TF4_Msgs - unknown discrete report: " + DST.dscrt_states[i].dscrt_id);
                     }
                 }
                 break;
             case MSG_CODE_UNKNOWN:
             default: {
-                System.out.println(port_name + " RX" + cnt + "TF4 (JPM) Received msg body has illegal/unsupported msg code=" +
-                        LM.msg_code);
+                System.out.println(
+                        port_name + " RX" + cnt + "TF4 (JPM) Received msg body has illegal/unsupported msg code=" +
+                                LM.msg_code);
             }
         }
     }
@@ -282,7 +345,7 @@ public class MessageListener implements SerialPortMessageListener {
                     // TODO check for unknown discrete value
                     switch (DST.dscrt_states[i].dscrt_id) {
                         case DSCRT_UNKNOWN:
-                            //System.out.println("Process_TF3_Msgs - unknown discrete report (1)");
+                            // System.out.println("Process_TF3_Msgs - unknown discrete report (1)");
                             break;
                         case MPU_DSCRT_IN_MCU_HW_RST:
                             MPU_GD.dscrt_in_MCU_HW_RST = DST.dscrt_states[i].dscrt_val.ordinal();
@@ -307,7 +370,8 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_TX_GPS_MPU:
                 // GPS message from the GPS on the NAV board controlled by the MPU
                 byte[] gps_msg_body = MessageBody.GetBytes(LM, msg);
-                // assume the GPS connected to the MPU (if any) is same as the one conected to the LUMO
+                // assume the GPS connected to the MPU (if any) is same as the one conected to
+                // the LUMO
                 LUMO_GD.gPS_UBX_Data.Update(gps_msg_body);
                 break;
             case MSG_CODE_TX_AHRS:
@@ -318,14 +382,14 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_INT_COMM_TST_RSLTS:
                 Internal_comms_test_results ICTR = new Internal_comms_test_results(MR);
                 MPU_GD.ICTR = "";
-                for (int i = 0; i < ICTR.int_comms_test_results.length; i++){
-                    if(ICTR.int_comms_test_results[i].host_A == EnDef.host_name_ce.HOST_UNKNOWN)
+                for (int i = 0; i < ICTR.int_comms_test_results.length; i++) {
+                    if (ICTR.int_comms_test_results[i].host_A == EnDef.host_name_ce.HOST_UNKNOWN)
                         continue;
-                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].host_A+"-";
-                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].host_B+": ";
-                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].MER+"; ";
+                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].host_A + "-";
+                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].host_B + ": ";
+                    MPU_GD.ICTR += ICTR.int_comms_test_results[i].MER + "; ";
                 }
-                    break;
+                break;
             case MSG_CODE_EO_STTS:
                 MPU_GD.LMCS = new LM_Camera_Status(MR);
                 byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
@@ -338,8 +402,9 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_TEXT: {
                 // for now, we only have the same TX "TextMsg"
                 if (rx_body_size != TEXT_MSG_SIZE) {
-                    System.out.println(port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
-                            rx_body_size + "class length=" + TEXT_MSG_SIZE);
+                    System.out.println(
+                            port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
+                                    rx_body_size + "class length=" + TEXT_MSG_SIZE);
                     break;
                 }
                 TextMsg TXsg = new TextMsg(MR);
@@ -352,14 +417,16 @@ public class MessageListener implements SerialPortMessageListener {
                 break;
             case MSG_CODE_UNKNOWN:
             default: {
-                System.out.println(port_name + " RX" + cnt + "TF3 (MPU) Received msg body has illegal/unsupported msg code=" +
-                        LM.msg_code);
+                System.out.println(
+                        port_name + " RX" + cnt + "TF3 (MPU) Received msg body has illegal/unsupported msg code=" +
+                                LM.msg_code);
             }
         }
     }
 
     private void ProcessEOMessage(byte[] EO_msg_body) {
-        // parse an EO status message (in ATE-LMDS ICD) and update the EO monitor display
+        // parse an EO status message (in ATE-LMDS ICD) and update the EO monitor
+        // display
     }
 
     private void Process_TF2_Msgs(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
@@ -381,13 +448,13 @@ public class MessageListener implements SerialPortMessageListener {
                 break;
             case MSG_CODE_BATTERY_STTS:
                 battery_stts BTS = new battery_stts(MR);
-                PCM_GD.bat_chg_inh = BTS.CHG_INH ;
-                PCM_GD.bat_current = BTS.Battery_Current ;
-                PCM_GD.bat_hi = BTS.BATHI ;
-                PCM_GD.bat_internal_temp = BTS.Internal_Temp ;
-                PCM_GD.bat_lo = BTS.BATLO ;
-                PCM_GD.bat_monitor_comm = BTS.Battery_monitor_comms_OK ;
-                PCM_GD.bat_voltage = BTS.Battery_Voltage ;
+                PCM_GD.bat_chg_inh = BTS.CHG_INH;
+                PCM_GD.bat_current = BTS.Battery_Current;
+                PCM_GD.bat_hi = BTS.BATHI;
+                PCM_GD.bat_internal_temp = BTS.Internal_Temp;
+                PCM_GD.bat_lo = BTS.BATLO;
+                PCM_GD.bat_monitor_comm = BTS.Battery_monitor_comms_OK;
+                PCM_GD.bat_voltage = BTS.Battery_Voltage;
                 break;
             case MSG_CODE_PWR_MSRMNT:
                 pwr_sgnals_msrmnts PSM = new pwr_sgnals_msrmnts(MR);
@@ -406,7 +473,7 @@ public class MessageListener implements SerialPortMessageListener {
                     // TODO check for unknown discrete value
                     switch (DST.dscrt_states[i].dscrt_id) {
                         case DSCRT_UNKNOWN:
-                            //System.out.println("Process_TF2_Msgs - unknown discrete report (1)");
+                            // System.out.println("Process_TF2_Msgs - unknown discrete report (1)");
                             break;
                         case PCM_DSCRT_IN_ACK_FIRE:
                             PCM_GD.dscrt_in_ack_fire = DST.dscrt_states[i].dscrt_val.ordinal();
@@ -443,8 +510,9 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_TEXT: {
                 // for now, we only have the same TX "TextMsg"
                 if (rx_body_size != TEXT_MSG_SIZE) {
-                    System.out.println(port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
-                            rx_body_size + "class length=" + TEXT_MSG_SIZE);
+                    System.out.println(
+                            port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
+                                    rx_body_size + "class length=" + TEXT_MSG_SIZE);
                     break;
                 }
                 TextMsg TXsg = new TextMsg(MR);
@@ -453,8 +521,9 @@ public class MessageListener implements SerialPortMessageListener {
             }
             case MSG_CODE_UNKNOWN:
             default: {
-                System.out.println(port_name + " RX" + cnt + "TF1 (LUMO) Received msg body has illegal/unsupported msg code=" +
-                        LM.msg_code);
+                System.out.println(
+                        port_name + " RX" + cnt + "TF1 (LUMO) Received msg body has illegal/unsupported msg code=" +
+                                LM.msg_code);
             }
         }
     }
@@ -496,16 +565,16 @@ public class MessageListener implements SerialPortMessageListener {
                     // TODO check for unknown discrete value
                     switch (DST.dscrt_states[i].dscrt_id) {
                         case DSCRT_UNKNOWN:
-                            //System.out.println("Process_TF1_Msgs - unknown discrete report (1)");
+                            // System.out.println("Process_TF1_Msgs - unknown discrete report (1)");
                             break;
                         case LUMO_DSCRT_IN_DIP_SW_0:
                             LUMO_GD.dip_switch += DST.dscrt_states[i].dscrt_val.ordinal();
                             break;
                         case LUMO_DSCRT_IN_DIP_SW_1:
-                            LUMO_GD.dip_switch += 2*DST.dscrt_states[i].dscrt_val.ordinal();
+                            LUMO_GD.dip_switch += 2 * DST.dscrt_states[i].dscrt_val.ordinal();
                             break;
                         case LUMO_DSCRT_IN_DIP_SW_2:
-                            LUMO_GD.dip_switch += 4*DST.dscrt_states[i].dscrt_val.ordinal();
+                            LUMO_GD.dip_switch += 4 * DST.dscrt_states[i].dscrt_val.ordinal();
                             break;
                         case LUMO_DSCRT_IN_UMBILICAL_INIT:
                             LUMO_GD.umbili_init = DST.dscrt_states[i].dscrt_val.ordinal();
@@ -537,24 +606,26 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_TEXT: {
                 // for now, we only have the same TX "TextMsg"
                 if (rx_body_size != TEXT_MSG_SIZE) {
-                    System.out.println(port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
-                            rx_body_size + "class length=" + TEXT_MSG_SIZE);
+                    System.out.println(
+                            port_name + " RX" + cnt + "Received msg body has conflicting sizes. calculated Length=" +
+                                    rx_body_size + "class length=" + TEXT_MSG_SIZE);
                     break;
                 }
                 TextMsg TXsg = new TextMsg(MR);
                 System.out.println(port_name + " RX" + cnt + " OK- " + TXsg.ToString());
                 break;
-                }
+            }
             case MSG_CODE_UNKNOWN:
             default: {
-                System.out.println(port_name + " RX" + cnt + "TF1 (LUMO) Received msg body has illegal/unsupported msg code=" +
-                        LM.msg_code);
+                System.out.println(
+                        port_name + " RX" + cnt + "TF1 (LUMO) Received msg body has illegal/unsupported msg code=" +
+                                LM.msg_code);
             }
         }
     }
 
     private void ProcessGetConfigParamMsg(config_param cp) {
-        switch(cp.config_params_id) {
+        switch (cp.config_params_id) {
             case CP_LUMO_PITOT_GN_OFST:
                 LUMO_GD.pitot_gain = cp.data[0];
                 LUMO_GD.pitot_offset = cp.data[1];
@@ -589,13 +660,13 @@ public class MessageListener implements SerialPortMessageListener {
                 MPU_GD.ailrn_4_ofst = cp.data[3];
                 break;
             default:
-                System.out.println("Message Listener - illegal parameter ID. Ignored.  "+cp.config_params_id);
+                System.out.println("Message Listener - illegal parameter ID. Ignored.  " + cp.config_params_id);
                 return;
         }
     }
 
     private short ToShort(byte lo, byte hi) {
-        return (short)((lo & 0xff) | ((hi&0xff)<<8));
+        return (short) ((lo & 0xff) | ((hi & 0xff) << 8));
     }
 
     private void ProcessSAASMMessage(byte[] saasm_msg_body) {
