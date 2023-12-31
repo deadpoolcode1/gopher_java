@@ -178,7 +178,7 @@ public class main {
         if(CMN_GD.ATE_SIM_MODE)
             InitPeriodicalTasks();
         InitLAN_Port();
-        if (CMN_GD.ATE_SIM_MODE && txGopherFile != null && !txGopherFile.isEmpty() && txGopherLine >= 0) {
+        if (!CMN_GD.ATE_SIM_MODE && txGopherFile != null && !txGopherFile.isEmpty() && txGopherLine >= 0) {
             File file = new File(txGopherFile);
             if (file.exists() && !file.isDirectory()) {
                 // File exists and is not a directory; proceed with simulation
