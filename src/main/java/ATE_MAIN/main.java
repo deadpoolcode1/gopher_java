@@ -72,8 +72,9 @@ public class main {
     public static String jpm_ds_address_string = "", ate_address_string = "",
             test_radios = "NO", api_out_folder, adt_address_string,  gdt_address_string,
             adt_password, gdt_password, adt_ate_radio_address_string, gdt_ate_radio_address_string,
-            adt_user_name="admin", gdt_user_name="admin";
+            adt_user_name="admin", gdt_user_name="admin", GOPHER_Json_out_folder_string = "";
     public static int adt_streaming_listener_port, gdt_streaming_listener_port;
+    public static To_LMDS_Json_Recorder to_LMDS_Json_Recorder;
     static JFrame frame;
     static int nports;
     public static JSONObject parameters=null;
@@ -118,7 +119,7 @@ public class main {
             @Override
             public void run() {
                 UIManager.put("swing.boldMetal", Boolean.FALSE);
-                frame = new JFrame("ATE_SIM: an LMDS Testing Application - Dec. 16, 2023");
+                frame = new JFrame("ATE_SIM: an LMDS Testing Application - Dec. 29, 2023");
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 if (CMN_GD.ATE_SIM_MODE) {
                     JTabbedPane tabbedPane = new JTabbedPane();
@@ -170,6 +171,9 @@ public class main {
         InitLAN_Port();
         if(! CMN_GD.ATE_SIM_MODE && !MConfig.getFakeDatabase())
             InitGOPHER_Sender();
+        if(CMN_GD.RECORD_SENT_MSGS_IN_JSON) {
+            to_LMDS_Json_Recorder = new To_LMDS_Json_Recorder(GOPHER_Json_out_folder_string);
+        }
         //sleep for 10 hours and then exit
         try {
             Thread.sleep(1000 * 36000); } catch (Exception e) { e.printStackTrace();
@@ -259,6 +263,9 @@ public class main {
         // an ATE IP address on the "172.20.x.x" subnet to allow streaming listeners
         adt_ate_radio_address_string = (String)parameters.get("ATE_RADIO_IP_address_ADT");
         gdt_ate_radio_address_string = (String)parameters.get("ATE_RADIO_IP_address_GDT");
+        GOPHER_Json_out_folder_string = (String)parameters.get("GOPHER_Json_out_folder");
+        // add here an init for the FileWriters object to allow for json record writes to store sent out messages recordings (GOPHER use)
+        // see CMN_GD for these object declarations
         return;
     }
 
@@ -309,8 +316,10 @@ public class main {
             text[i] = sb[i];
     }
 
-    public static void SendMessage(int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body) {//idx- 0 to 9 serial, 10 lan
+    public static void SendMessage
+            (int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body) throws IOException {
         // builds a standard ATE message and sends it over the deignated port. body may be null. Other parameters must be non-null.
+        // when in Json out recording mode, also record the outgoing message to a Json logger
         int len=0;
         if(port_ix <0)
             return; // can't send - no valid port
@@ -345,36 +354,12 @@ public class main {
             // send to the adressee over the LAN
             aTE_JPM_LAN.Send(txbuf);
         if(CMN_GD.RECORD_SENT_MSGS_IN_JSON)
-            Record_Out_Message_In_Json(port_ix, LH, body);
+            to_LMDS_Json_Recorder.Add_Json_Record(port_ix, LH, body);
+            //Record_Out_Message_In_Json(port_ix, LH, body);
     }
 
     private static void Record_Out_Message_In_Json(int portIx, LMDS_HDR lh, MessageBody msg_body) {
-        if (MConfig.getFakeDatabase()) {
-            String fileName = "outgoing_lmds" + portIx + ".txt";
-            Gson gson = new Gson();
-            String jsonHeader = gson.toJson(lh);
-            String jsonBody = gson.toJson(msg_body);
-
-            int logNumber = MessageListener.getNextLogNumber(fileName);
-
-            boolean shouldAppend = true;
-            try {
-                List<String> lines = Files.readAllLines(Paths.get(fileName));
-                if (!lines.isEmpty()) {
-                    String lastLine = lines.get(lines.size() - 1);
-                    if (lastLine.contains("\"msg_code\":\"" + lh.msg_code + "\"")) {
-                        shouldAppend = false;
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            if (shouldAppend) {
-                String logEntry = "log_number:" + logNumber + "=LMDS_HDR: " + jsonHeader + ", MessageBody: " + jsonBody;
-                MessageListener.appendToLogFile(fileName, logEntry, logNumber);
-            }
-        }
+        // GOPHER use - add code to record in Json sent out messages
     }
 
     public static Address GetNewAddress(EnDef.host_name_ce host, EnDef.process_name_ce process) {

@@ -65,7 +65,7 @@ public class App {
             String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
 
             // Initialize MConfig with parsed arguments
-            MConfig.initialize(dbServer, dbUsername, dbPassword);
+            MConfig.initialize(dbServer, dbUsername, dbPassword, true);
         if (!unittest()) {
             System.exit(1); // Exit with error code if unittest fails
         }
