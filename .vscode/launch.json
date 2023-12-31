@@ -7,7 +7,7 @@
             "request": "launch",
             "mainClass": "ATE_MAIN.main",
             "projectName": "gopher",
-            "args": "--dbServer localhost --dbUsername SA --dbPassword Ss6399812 --fakeDatabase true"
+            "args": "--dbServer localhost --dbUsername SA --dbPassword Ss6399812 --fakeDatabase true --txGopherFile '~/java/gopher/messages/ToLMDS_Json.json' --txGopherLine 2"
         }
     ]
 }

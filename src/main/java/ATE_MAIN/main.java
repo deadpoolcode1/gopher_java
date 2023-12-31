@@ -19,6 +19,7 @@ import ATE_GUI.PCM_GUI.PCM_TestSelect;
 import LMDS_ICD.*;
 import com.fazecast.jSerialComm.SerialPort;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import main.java.ip_radio_interface.IP_RADIO_PeriodicATE_Task;
 import org.jfree.chart.ChartPanel;
@@ -50,6 +51,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
+
 import com.yourcompany.app.App;
 import com.yourcompany.app.Database;
 import com.yourcompany.app.MConfig;
@@ -99,6 +102,9 @@ public class main {
      * @throws ParseException
      */
     static public void main(String[] args) throws IOException, ClassNotFoundException, URISyntaxException, ParseException {
+        String txGopherFile = null;
+        String txGopherLineStr = null;
+        int txGopherLine = -1;
         if (!CMN_GD.ATE_SIM_MODE) {
             Map<String, String> argMap = parseArguments(args);
 
@@ -106,7 +112,10 @@ public class main {
             String dbUsername = argMap.getOrDefault("dbUsername", "defaultUsername");
             String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
             boolean fakeDatabase = Boolean.parseBoolean(argMap.getOrDefault("fakeDatabase", "false"));
-
+            txGopherFile = argMap.get("txGopherFile");  // File for simulation
+            txGopherLineStr = argMap.get("txGopherLine"); // Line for simulation
+            txGopherLine = txGopherLineStr != null ? Integer.parseInt(txGopherLineStr) : -1; // Convert line number to integer
+        
             MConfig.initialize(dbServer, dbUsername, dbPassword, fakeDatabase);
 
             if (!App.unittest()) {
@@ -169,7 +178,16 @@ public class main {
         if(CMN_GD.ATE_SIM_MODE)
             InitPeriodicalTasks();
         InitLAN_Port();
-        if(! CMN_GD.ATE_SIM_MODE && !MConfig.getFakeDatabase())
+        if (CMN_GD.ATE_SIM_MODE && txGopherFile != null && !txGopherFile.isEmpty() && txGopherLine >= 0) {
+            File file = new File(txGopherFile);
+            if (file.exists() && !file.isDirectory()) {
+                // File exists and is not a directory; proceed with simulation
+                InitGOPHER_Sender(true, txGopherFile, txGopherLine);
+            } else {
+                System.err.println("Simulation file not found or is a directory: " + txGopherFile);
+            }
+        }  
+        else if(! CMN_GD.ATE_SIM_MODE && !MConfig.getFakeDatabase())
             InitGOPHER_Sender();
         if(CMN_GD.RECORD_SENT_MSGS_IN_JSON) {
             to_LMDS_Json_Recorder = new To_LMDS_Json_Recorder(GOPHER_Json_out_folder_string);
@@ -186,12 +204,47 @@ public class main {
         System.out.println("ATE_SIM Run terminated");
     }
 
+    private static String readLineFromFile(String filePath, int lineNum) throws IOException {
+        try (Stream<String> lines = Files.lines(Paths.get(filePath))) {
+            return lines.skip(lineNum).findFirst().orElse(null);
+        }
+    }
+
     private static void InitGOPHER_Sender() {
-        Gson gson = new Gson();
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(() -> {
-            try {
-                // Query the database for outgoing messages
+        InitGOPHER_Sender(false, null, -1);
+    }
+
+private static void InitGOPHER_Sender(boolean simulate, String filePath, int fileLine) {
+    Gson gson = new Gson();
+    ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
+    Runnable task = () -> {
+        try {
+            if (simulate && filePath != null && fileLine >= 0) {
+                // Simulation mode: Read a specific line from the file and simulate sending a message
+                String lineData = readLineFromFile(filePath, fileLine);
+                JsonObject jsonObj = gson.fromJson(lineData, JsonObject.class);
+
+                int portIndex = jsonObj.get("port_ix").getAsInt();
+                EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("host_name").getAsString());
+                EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("process_name").getAsString());
+                EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("host_name").getAsString());
+                EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("process_name").getAsString());
+                EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.getAsJsonObject("LMH").get("msg_code").getAsString());
+
+                Address destAddress = new Address();
+                destAddress.host_name = destHostName;
+                destAddress.process_name = destProcessName;
+
+                Address sendAddress = new Address();
+                sendAddress.host_name = sendHostName;
+                sendAddress.process_name = sendProcessName;
+
+                MessageBody body = gson.fromJson(jsonObj.get("MBDY").toString(), MessageBody.class);
+
+                SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
+            } else {
+                // Regular operation: Query the database for outgoing messages
                 String query = "SELECT id, port_index, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
                 List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                 for (String[] dataParts : messages) {
@@ -202,28 +255,37 @@ public class main {
                     EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(dataParts[4]);
                     EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(dataParts[5]);
                     EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(dataParts[6]);
-    
+
                     Address destAddress = new Address();
                     destAddress.host_name = destHostName;
                     destAddress.process_name = destProcessName;
-    
+
                     Address sendAddress = new Address();
                     sendAddress.host_name = sendHostName;
                     sendAddress.process_name = sendProcessName;
-    
-                    // Assuming the MessageBody class has a method to deserialize specific message types
-                    MessageBody body = gson.fromJson(dataParts[7], MessageBody.class); // Adjust as necessary to match the actual message class
-    
+
+                    MessageBody body = gson.fromJson(dataParts[7], MessageBody.class);
+
                     SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
-    
+
                     String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
                     Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-        }, 0, 1, TimeUnit.SECONDS); // Adjust the period according to your needs
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    };
+
+    if (simulate) {
+        // Run once for simulation
+        executorService.submit(task);
+    } else {
+        // Schedule at fixed rate for regular operation
+        executorService.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS);
     }
+}
+
 
     private static void InitPeriodicalTasks() throws URISyntaxException, IOException, ParseException {
         LUMO_PeriodicATE_Task LUMO_PeriodicATE_Task = new LUMO_PeriodicATE_Task();
