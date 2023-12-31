@@ -25,7 +25,7 @@ public class MPU_Camera_Monitor extends JPanel {
             public void actionPerformed( ActionEvent e )
             {
                 MPU_Camera_Control MPU_Camera_ControlDialog = new MPU_Camera_Control(
-                        HostFrame, "Camera Control", new Dimension(400,600));
+                        HostFrame, "Camera Control", new Dimension(450,800));
             }
         });
         add(BCamera_Control);
@@ -43,17 +43,22 @@ public class MPU_Camera_Monitor extends JPanel {
                         " LOS_body_attitude: %03 "+"<br/>"+
                         " FOVH: %04 "+"<br/>"+
                         " IR_Polarity: %05 "+"<br/>"+
-                        " camera_serviceability: %06 "+"<br/>"+
-                        " Camera_Faults_List: %07 "+"<br/>"+
+                        " Temperature: %06 "+"<br/>"+
+                        " camera_serviceability: %07 "+"<br/>"+
+                        " Camera_Faults_List: %08 "+"<br/>"+
                         "<html>";
+        String cyaw = String.format("%.4f", LMCS.LOS_body_attitude.yaw);
+        String cpitch = String.format("%.4f", LMCS.LOS_body_attitude.pitch);
+        String cfovh = String.format("%.4f", LMCS.FOVH);
         Camera_text = Camera_text.replace("%00", String.valueOf(LMCS.camera_id));
         Camera_text = Camera_text.replace("%01", String.valueOf(LMCS.camera_mode));
         Camera_text = Camera_text.replace("%02", String.valueOf(LMCS.spectrum));
-        Camera_text = Camera_text.replace("%03", LMCS.LOS_body_attitude.ToString());
-        Camera_text = Camera_text.replace("%04", String.valueOf(LMCS.FOVH));
+        Camera_text = Camera_text.replace("%03", " Yaw="+cyaw+"  Pitch="+cpitch);
+        Camera_text = Camera_text.replace("%04", cfovh);
         Camera_text = Camera_text.replace("%05", String.valueOf(LMCS.IR_Polarity));
-        Camera_text = Camera_text.replace("%06", String.valueOf(LMCS.camera_serviceability));
-        Camera_text = Camera_text.replace("%07", Arrays.toString(LMCS.Camera_Faults_List));
+        Camera_text = Camera_text.replace("%06", String.valueOf(LMCS.Temperature));
+        Camera_text = Camera_text.replace("%07", String.valueOf(LMCS.camera_serviceability));
+        Camera_text = Camera_text.replace("%08", Arrays.toString(LMCS.Camera_Faults_List));
         //String Camera_text = "dummy Camera text";
         message_line.setText(Camera_text);
     }

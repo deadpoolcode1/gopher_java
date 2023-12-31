@@ -10,6 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 public class MPU_PWM_Control_Test extends DialogTemplate {
     //private static JList SelectionList;
@@ -73,10 +74,12 @@ public class MPU_PWM_Control_Test extends DialogTemplate {
                     return;
                 }
                 if(CMN_GD.ServicePort >=0)
-                    main.SendMessage(CMN_GD.ServicePort,
+                    try {
+                        main.SendMessage(CMN_GD.ServicePort,
                             main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
                             main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF3),
                             EnDef.msg_code_ce.MSG_CODE_PWM_CNTRL_STTS, PCS);
+                    } catch (IOException ex) { throw new RuntimeException(ex); }
                 else
                     System.out.println("PWM_Control - Service comm port inactive. Can't send.");
 

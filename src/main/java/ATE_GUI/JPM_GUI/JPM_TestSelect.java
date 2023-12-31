@@ -11,6 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 public class JPM_TestSelect extends JPanel {
     /**
@@ -72,11 +73,13 @@ public class JPM_TestSelect extends JPanel {
                     case 2: JPM_Discrete_Control JPMDiscrete_Control_Dialog = new JPM_Discrete_Control(
                             HostFrame, "Discrete Control Test", new Dimension(400,550));
                     case 3:
+                        try {
                             main.SendMessage(CMN_GD.ServicePort,
                                     main.GetNewAddress(EnDef.host_name_ce.HOST_JPM, EnDef.process_name_ce.PR_TST_CMND),
                                     main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF4),
                                     EnDef.msg_code_ce.MSG_CODE_GET_DS_REVSN, null);
-                            break;
+                        } catch (IOException ex) { throw new RuntimeException(ex); }
+                        break;
                     default:
                         System.out.println("TestSelect - illegal item selected: "+item);
                 }

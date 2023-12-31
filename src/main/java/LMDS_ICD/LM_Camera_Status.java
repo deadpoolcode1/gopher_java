@@ -12,10 +12,11 @@ public class LM_Camera_Status extends MessageBody {
    public attitude LOS_body_attitude;
    public float FOVH;
    public EnDef.IR_Polarity_ce IR_Polarity;
+   public float Temperature;
    public EnDef.Serviceability_ce camera_serviceability;
    public int[] Camera_Faults_List;
    public LM_Camera_Status() {
-       Size = 132;
+       Size = 136;
        camera_id = new byte[20];
        LOS_body_attitude = new attitude();
        Camera_Faults_List = new int[20];
@@ -31,6 +32,7 @@ public class LM_Camera_Status extends MessageBody {
        copy.LOS_body_attitude = LOS_body_attitude.Clone();
        copy.FOVH = FOVH;
        copy.IR_Polarity = IR_Polarity;
+       copy.Temperature = Temperature;
        copy.camera_serviceability = camera_serviceability;
        copy.Camera_Faults_List = new int[20];
        for(int ix__=0;ix__< 20; ix__++)
@@ -38,7 +40,7 @@ public class LM_Camera_Status extends MessageBody {
        return copy;
    }
    public LM_Camera_Status(MsgRdr MR) {
-       Size = 132;
+       Size = 136;
        camera_id = new byte[20];
        Camera_Faults_List = new int[20];
        for(int ix__=0;ix__< 20; ix__++)
@@ -48,6 +50,7 @@ public class LM_Camera_Status extends MessageBody {
        LOS_body_attitude = new attitude(MR);
        FOVH = MR.Read_float();
        IR_Polarity = EnDef.IR_Polarity_ce.values()[MR.Read_int()];
+       Temperature = MR.Read_float();
        camera_serviceability = EnDef.Serviceability_ce.values()[MR.Read_int()];
        for(int ix__=0;ix__< 20; ix__++)
            Camera_Faults_List[ix__] = MR.Read_int();
@@ -62,6 +65,7 @@ public class LM_Camera_Status extends MessageBody {
         MB.Add(LOS_body_attitude.GetBytes());
         MB.Add(MB.GetBytes(FOVH));
         MB.Add(MB.GetBytes(IR_Polarity.ordinal()));
+        MB.Add(MB.GetBytes(Temperature));
         MB.Add(MB.GetBytes(camera_serviceability.ordinal()));
         for(int ix__=0;ix__< 20; ix__++)
             MB.Add(MB.GetBytes(Camera_Faults_List[ix__]));
@@ -75,6 +79,7 @@ public class LM_Camera_Status extends MessageBody {
        s += " LOS_body_attitude: "+ LOS_body_attitude.ToString();
        s += " FOVH: "+ FOVH;
        s += " IR_Polarity: "+ IR_Polarity;
+       s += " Temperature: "+ Temperature;
        s += " camera_serviceability: "+ camera_serviceability;
        s += " Camera_Faults_List: "+ Arrays.toString(Camera_Faults_List);
        return s;

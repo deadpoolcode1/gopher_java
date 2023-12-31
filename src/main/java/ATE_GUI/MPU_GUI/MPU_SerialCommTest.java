@@ -10,6 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 public class MPU_SerialCommTest extends DialogTemplate {
     //private static JList SelectionList;
@@ -41,10 +42,12 @@ public class MPU_SerialCommTest extends DialogTemplate {
                     SCT.bytes[i + 2] = (byte) 0xEF;
                     SCT.bytes[i + 3] = (byte) 0xA7;
                 }
-                main.SendMessage(port,
+                try {
+                    main.SendMessage(port,
                         main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
                         main.GetNewAddress(SenderHost, EnDef.process_name_ce.PR_ATE_TF3),
                         EnDef.msg_code_ce.MSG_CODE_SER_COMM_TST, SCT);
+                } catch (IOException ex) { throw new RuntimeException(ex); }
                 CMN_GD.comm_n_tx++;
         }
         });

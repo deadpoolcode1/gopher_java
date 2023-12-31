@@ -14,6 +14,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.IOException;
 
 public class MPU_Config_Params_Control extends DialogTemplate {
     /**
@@ -129,10 +130,12 @@ public class MPU_Config_Params_Control extends DialogTemplate {
                     System.out.println("MPU Config Params Control - Service comm port inactive. Can't send.");
                     return;
                 }
-                main.SendMessage(CMN_GD.ServicePort,
+                try {
+                    main.SendMessage(CMN_GD.ServicePort,
                         main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
                         main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF3),
                         msg_code, msg_body);
+                } catch (IOException ex) { throw new RuntimeException(ex); }
             }
         });
     }

@@ -9,6 +9,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 import static LMDS_ICD.EnDef.host_name_ce.*;
 
@@ -80,10 +81,12 @@ public class DS_Control extends DialogTemplate {
                     System.out.println("DS_Control - Service comm port inactive. Can't send.");
                     return;
                 }
-                main.SendMessage(CMN_GD.ServicePort,
-                    main.GetNewAddress(UUT_id, EnDef.process_name_ce.PR_TST_CMND),
-                    main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, sender_TF),
-                    EnDef.msg_code_ce.MSG_CODE_DS_CNTRL, DSC);
+                try {
+                    main.SendMessage(CMN_GD.ServicePort,
+                        main.GetNewAddress(UUT_id, EnDef.process_name_ce.PR_TST_CMND),
+                        main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, sender_TF),
+                        EnDef.msg_code_ce.MSG_CODE_DS_CNTRL, DSC);
+                } catch (IOException ex) { throw new RuntimeException(ex); }
                 // TODO the state is saved upon sending. may be invalid if rejected / not arrived by/to the UUT!
                 switch(UUT_id) {
                     case HOST_MPU:

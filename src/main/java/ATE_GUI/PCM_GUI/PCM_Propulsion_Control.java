@@ -13,6 +13,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.IOException;
 
 public class PCM_Propulsion_Control extends DialogTemplate {
     JToggleButton MotorStateButton;
@@ -77,10 +78,12 @@ public class PCM_Propulsion_Control extends DialogTemplate {
                     return;
                 }
                 PCM_GD.motor_duty_cycle = LPC.motor_duty_cycle;
-                main.SendMessage(CMN_GD.ServicePort,
+                try {
+                    main.SendMessage(CMN_GD.ServicePort,
                         main.GetNewAddress(EnDef.host_name_ce.HOST_PCM, EnDef.process_name_ce.PR_TST_CMND),
                         main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF2),
                         EnDef.msg_code_ce.MSG_CODE_PRPLSN_CNTRL, LPC);
+                } catch (IOException ex) { throw new RuntimeException(ex); }
 
             }
         });

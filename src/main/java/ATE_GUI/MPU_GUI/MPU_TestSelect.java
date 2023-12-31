@@ -12,6 +12,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 
 public class MPU_TestSelect extends JPanel{
@@ -93,10 +94,12 @@ public class MPU_TestSelect extends JPanel{
                                 HostFrame, "Config Params Control", new Dimension(600,350));
                         break;
                     case 5:
-                        main.SendMessage(CMN_GD.ServicePort,
+                        try {
+                            main.SendMessage(CMN_GD.ServicePort,
                                 main.GetNewAddress(EnDef.host_name_ce.HOST_MPU, EnDef.process_name_ce.PR_TST_CMND),
                                 main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF3),
                                 EnDef.msg_code_ce.MSG_CODE_GET_DS_REVSN, null);
+                        } catch (IOException ex) { throw new RuntimeException(ex); }
                         break;
                     default:
                         System.out.println("TestSelect - illegal item selected: "+item);

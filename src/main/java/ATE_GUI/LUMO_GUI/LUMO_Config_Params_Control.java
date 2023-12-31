@@ -11,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.IOException;
 
 public class LUMO_Config_Params_Control extends DialogTemplate {
     /**
@@ -181,10 +182,12 @@ public class LUMO_Config_Params_Control extends DialogTemplate {
                     return;
                 }
                 if(CMN_GD.ServicePort >=0)
-                    main.SendMessage(CMN_GD.ServicePort,
+                    try {
+                        main.SendMessage(CMN_GD.ServicePort,
                             main.GetNewAddress(EnDef.host_name_ce.HOST_LUMO, EnDef.process_name_ce.PR_TST_CMND),
                             main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF1),
                             msg_code, msg_body);
+                    } catch ( IOException ex) { throw new RuntimeException(ex); }
             }
         });
     }

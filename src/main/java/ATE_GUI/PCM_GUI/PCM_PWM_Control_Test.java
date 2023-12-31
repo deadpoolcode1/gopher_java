@@ -11,6 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 public class PCM_PWM_Control_Test extends DialogTemplate {
     //private static JList SelectionList;
@@ -70,10 +71,12 @@ public class PCM_PWM_Control_Test extends DialogTemplate {
                         break;
                 }
                 if(CMN_GD.ServicePort >=0)
+                    try {
                     main.SendMessage(CMN_GD.ServicePort,
                             main.GetNewAddress(EnDef.host_name_ce.HOST_PCM, EnDef.process_name_ce.PR_TST_CMND),
                             main.GetNewAddress(EnDef.host_name_ce.HOST_ATE_SERVER, EnDef.process_name_ce.PR_ATE_TF2),
                             EnDef.msg_code_ce.MSG_CODE_PWM_CNTRL_STTS, PCS);
+                    } catch (IOException ex) { throw new RuntimeException(ex); }
                 else
                     System.out.println("PWM_Control - Service comm port inactive. Can't send.");
 
