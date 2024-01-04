@@ -123,14 +123,13 @@ public class main {
             }
         }
         InitParameters(); // read the common configuration data
-        System.setProperty("java.awt.headless", "true");
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                UIManager.put("swing.boldMetal", Boolean.FALSE);
-                frame = new JFrame("ATE_SIM: an LMDS Testing Application - Dec. 29, 2023");
-                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                if (CMN_GD.ATE_SIM_MODE) {
+        if (CMN_GD.ATE_SIM_MODE) {
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    UIManager.put("swing.boldMetal", Boolean.FALSE);
+                    frame = new JFrame("ATE_SIM: an LMDS Testing Application - Jan. 1, 2024");
+                    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     JTabbedPane tabbedPane = new JTabbedPane();
                     LUMO_TestSelect lUMO_TestSelect = new LUMO_TestSelect(frame);
                     tabbedPane.addTab("LUMO Main", null, new JScrollPane(lUMO_TestSelect), "LUMO Main test controls & results");
@@ -166,13 +165,11 @@ public class main {
                         //IP_RADIO_PeriodicATE_Task iP_RADIO_PeriodicATE_Task_ADT = null;
                     }
                     frame.add(tabbedPane, BorderLayout.CENTER);
+                    frame.pack();
+                    frame.setVisible(true); //Display the window.
                 }
-                //Display the window.
-                frame.pack();
-                frame.setVisible(true);
-            }
-        });
-
+            });
+        }
         InitSerialCommPorts(); // find and set the service and other serial ports
         try { Thread.sleep(1000); } catch (Exception e) { e.printStackTrace(); }
         if(CMN_GD.ATE_SIM_MODE)
@@ -346,15 +343,17 @@ private static void InitGOPHER_Sender(boolean simulate, String filePath, int fil
             port_names[i] = new String(comPorts[i].getSystemPortName());
             System.out.println("Serial port #" + i+",  "+comPorts[i].getDescriptivePortName()); // todo restore to service if not lan used for it
         }
-        // this test program supports up to 2 ports. Manualy Identify the service and other port
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                // now let the user select the serial service port and set the other, if any
-                SetSerialPorts setSerialPorts = new SetSerialPorts( frame, "Set the Serial Ports", new Dimension(500,400), port_names);
-            }
-        });
-
+        if (CMN_GD.ATE_SIM_MODE) {
+            // this test program supports up to 2 ports. Manualy Identify the service and other port
+            // when in GOPHER mode, the port on which each message to the LMDS has to be sent is commanded by the ATE.
+            EventQueue.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    // now let the user select the serial service port and set the other, if any
+                    SetSerialPorts setSerialPorts = new SetSerialPorts(frame, "Set the Serial Ports", new Dimension(500, 400), port_names);
+                }
+            });
+        }
     }
 
     private static void InitLAN_Port() {
