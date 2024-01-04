@@ -81,7 +81,10 @@ public class main {
     static JFrame frame;
     static int nports;
     public static JSONObject parameters=null;
-
+    public static String dbServer = null;
+    public static String dbUsername = null;
+    public static String dbPassword = null;
+    public static boolean fakeDatabase = false;
 
     private static Map<String, String> parseArguments(String[] args) {
         Map<String, String> argMap = new HashMap<>();
@@ -105,13 +108,10 @@ public class main {
         String txGopherFile = null;
         String txGopherLineStr = null;
         int txGopherLine = -1;
+        InitParameters(); // read the common configuration data
         if (!CMN_GD.ATE_SIM_MODE) {
             Map<String, String> argMap = parseArguments(args);
 
-            String dbServer = argMap.getOrDefault("dbServer", "defaultServer");
-            String dbUsername = argMap.getOrDefault("dbUsername", "defaultUsername");
-            String dbPassword = argMap.getOrDefault("dbPassword", "defaultPassword");
-            boolean fakeDatabase = Boolean.parseBoolean(argMap.getOrDefault("fakeDatabase", "false"));
             txGopherFile = argMap.get("txGopherFile");  // File for simulation
             txGopherLineStr = argMap.get("txGopherLine"); // Line for simulation
             txGopherLine = txGopherLineStr != null ? Integer.parseInt(txGopherLineStr) : -1; // Convert line number to integer
@@ -122,7 +122,7 @@ public class main {
                 System.exit(1); // Exit if the unit test fails
             }
         }
-        InitParameters(); // read the common configuration data
+        
         if (CMN_GD.ATE_SIM_MODE) {
             EventQueue.invokeLater(new Runnable() {
                 @Override
@@ -325,6 +325,12 @@ private static void InitGOPHER_Sender(boolean simulate, String filePath, int fil
         GOPHER_Json_out_folder_string = (String)parameters.get("GOPHER_Json_out_folder");
         // add here an init for the FileWriters object to allow for json record writes to store sent out messages recordings (GOPHER use)
         // see CMN_GD for these object declarations
+        if (CMN_GD.ATE_SIM_MODE) {
+            dbServer = (String) parameters.get("dbServer");
+            dbUsername = (String) parameters.get("dbUsername");
+            dbPassword = (String) parameters.get("dbPassword");
+            fakeDatabase = (boolean) parameters.get("fakeDatabase");
+        }
         return;
     }
 

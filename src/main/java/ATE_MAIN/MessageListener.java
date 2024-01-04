@@ -149,24 +149,7 @@ public class MessageListener implements SerialPortMessageListener {
             String fileName = port_name + ".txt";
             int logNumber = getNextLogNumber(fileName);
     
-            // Read the last message from the file to compare msg_code
-            boolean shouldAppend = true;
-            try {
-                List<String> lines = Files.readAllLines(Paths.get(fileName));
-                if (!lines.isEmpty()) {
-                    String lastLine = lines.get(lines.size() - 1);
-                    if (lastLine.contains("msg_code=" + LM.msg_code)) { // adjust based on how msg_code is represented
-                        shouldAppend = false; // Don't append if the last message is of the same type
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-    
-            // Append to log file if conditions are met
-            if (shouldAppend) {
-                appendToLogFile(fileName, concatenatedJson, logNumber);
-            }
+            appendToLogFile(fileName, concatenatedJson, logNumber);
         } else {
             String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + port_name
                     + "' ORDER BY timestamp_pending_issued DESC";

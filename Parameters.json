@@ -17,6 +17,10 @@
   "GDT_IP_addres": "172.20.99.192",
   "GDT_PASSWORD": "NONE",
   "ADT_STREAMING_PORT": "2345",
-  "GDT_STREAMING_PORT": "2346"
-  "GOPHER_Json_out_folder": "/tmp/"
+  "GDT_STREAMING_PORT": "2346",
+  "GOPHER_Json_out_folder": "/tmp/",
+  "dbServer": "localhost",
+  "dbUsername": "SA",
+  "dbPassword": "dbPassword",
+  "fakeDatabase": true
 }
