@@ -22,5 +22,7 @@
   "dbServer": "localhost",
   "dbUsername": "SA",
   "dbPassword": "dbPassword",
-  "fakeDatabase": true
+  "fakeDatabase": true,
+  "txGopherFile": "~/java/gopher/messages/ToLMDS_Json.json",
+  "txGopherLine": 0
 }

@@ -85,6 +85,8 @@ public class main {
     public static String dbUsername = null;
     public static String dbPassword = null;
     public static boolean fakeDatabase = false;
+    public static String txGopherFile = null;
+    public static int txGopherLine = 0;
 
     private static Map<String, String> parseArguments(String[] args) {
         Map<String, String> argMap = new HashMap<>();
@@ -105,16 +107,11 @@ public class main {
      * @throws ParseException
      */
     static public void main(String[] args) throws IOException, ClassNotFoundException, URISyntaxException, ParseException {
-        String txGopherFile = null;
-        String txGopherLineStr = null;
-        int txGopherLine = -1;
         InitParameters(); // read the common configuration data
         if (!CMN_GD.ATE_SIM_MODE) {
             Map<String, String> argMap = parseArguments(args);
 
-            txGopherFile = argMap.get("txGopherFile");  // File for simulation
-            txGopherLineStr = argMap.get("txGopherLine"); // Line for simulation
-            txGopherLine = txGopherLineStr != null ? Integer.parseInt(txGopherLineStr) : -1; // Convert line number to integer
+
         
             MConfig.initialize(dbServer, dbUsername, dbPassword, fakeDatabase);
 
@@ -330,6 +327,8 @@ private static void InitGOPHER_Sender(boolean simulate, String filePath, int fil
             dbUsername = (String) parameters.get("dbUsername");
             dbPassword = (String) parameters.get("dbPassword");
             fakeDatabase = (boolean) parameters.get("fakeDatabase");
+            txGopherFile = (String) parameters.get("txGopherFile");
+            txGopherLine = (int) parameters.get("txGopherLine");
         }
         return;
     }
