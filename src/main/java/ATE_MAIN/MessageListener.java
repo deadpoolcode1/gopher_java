@@ -19,17 +19,21 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import java.io.*;
 import java.nio.file.*;
+import java.util.concurrent.*;
+import java.util.Map;
 
 public class MessageListener implements SerialPortMessageListener {
     static final int MAX_LENGTH = 248;
     final static int MSG_FRAME_SIZE = 32 + 8; // header + tail
-    // a class based on the jSerial data comm package. Tests receiving and
-    // serializing UUT LMDS messages
     static int cnt = 0;
     int TEST_MSG_SIZE = new TestMsg().GetSize();
     int TEXT_MSG_SIZE = new TextMsg().GetSize();
     int port_index = -1;
     static byte[] delimiter = { (byte) 0xca, (byte) 0xfe, (byte) 0x2d, (byte) 0xad };
+
+    private static final ExecutorService messageProcessingService = Executors.newFixedThreadPool(10); 
+    private static final BlockingQueue<Runnable> writeQueue = new LinkedBlockingQueue<>();
+    private static final ConcurrentMap<String, PrintWriter> fileWriters = new ConcurrentHashMap<>();
 
     public MessageListener(int port_index) {
         this.port_index = port_index;
@@ -54,13 +58,13 @@ public class MessageListener implements SerialPortMessageListener {
     public void serialEvent(SerialPortEvent event) {
         cnt++;
         byte[] msg = event.getReceivedData();
-        String port_name = event.getSerialPort().getSystemPortName();
+        String portName = event.getSerialPort().getSystemPortName();
         int ml = msg.length;
 
         // Handle invalid message lengths early
         if (ml > MAX_LENGTH || ml < MSG_FRAME_SIZE) {
             System.out.println(
-                    port_name + " RX" + cnt + "Received msg too large or too small, ignored. Length: " + msg.length);
+                    portName + " RX" + cnt + " Received msg too large or too small, ignored. Length: " + ml);
             return;
         }
 
@@ -69,7 +73,7 @@ public class MessageListener implements SerialPortMessageListener {
 
         // Check if message length is less than buffer length
         if (LM.length > ml) {
-            System.out.println("MessageListener: " + port_name + " RX" + cnt +
+            System.out.println("MessageListener: " + portName + " RX" + cnt +
                     " Received msg length in header < buffer length. HDR Length=" + LM.length + "  RX Buffer length="
                     + ml);
             return;
@@ -77,17 +81,17 @@ public class MessageListener implements SerialPortMessageListener {
 
         MsgTail MT = new MsgTail(msg, LM.length - 8);
         if (!MT.IsGoodChecksum(msg, LM.length)) {
-            System.out.println(port_name + " RX" + cnt + "Received msg has bad checksum. ignored.");
+            System.out.println(portName + " RX" + cnt + " Received msg has bad checksum. ignored.");
             return;
         }
 
         if (CMN_GD.ATE_SIM_MODE) {
-            processSimulatedModeMessages(MR, LM, msg, port_name);
+            processSimulatedModeMessages(MR, LM, msg, portName); // Define this method to handle simulated mode messages
         } else {
-            processRealModeMessages(port_name, MR, LM, msg);
+            processRealModeMessages(portName, MR, LM, msg); // Define this method to handle real mode messages
         }
     }
-
+    
     private void processSimulatedModeMessages(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         switch (LM.dest_address.process_name) {
             case PR_ATE_TF1:
@@ -130,51 +134,98 @@ public class MessageListener implements SerialPortMessageListener {
         }
     }
     
-    public static void appendToLogFile(String fileName, String message, int logNumber) {
-        try (FileWriter fw = new FileWriter(fileName, true);
-             BufferedWriter bw = new BufferedWriter(fw);
-             PrintWriter out = new PrintWriter(bw)) {
-            out.println("log_number:" + logNumber + "=" + message + "\r\n");
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
+    static {
+        Thread fileWriterThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    Runnable writeTask = writeQueue.take();
+                    writeTask.run();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        fileWriterThread.start();
+    }
+
+    private static boolean isFirstWrite = true; // Tracks if it's the first write operation since the software started
+
+    private static void appendToLogFile(String fileName, String message) {
+        fileWriters.computeIfAbsent(fileName, k -> {
+            try {
+                // Open the file in overwrite mode if it's the first write, otherwise in append mode
+                FileWriter fw = new FileWriter(k, !isFirstWrite);
+                BufferedWriter bw = new BufferedWriter(fw);
+                return new PrintWriter(bw);
+            } catch (IOException e) {
+                System.err.println("Error opening file: " + e.getMessage());
+                return null;
+            }
+        });
+
+        // Write the message to the file
+        writeQueue.add(() -> {
+            PrintWriter out = fileWriters.get(fileName);
+            if (out != null) {
+                out.println(message + "\r\n");
+                out.flush(); // Ensure the message is written immediately
+            } else {
+                System.err.println("FileWriter not initialized for: " + fileName);
+            }
+        });
+
+        // After the first write, all subsequent writes should append to the file
+        isFirstWrite = false;
+    }
+
+    public void shutdown() {
+        messageProcessingService.shutdown(); // Shutdown the executor service
+        // Close all file writers
+        for (Map.Entry<String, PrintWriter> entry : fileWriters.entrySet()) {
+            try {
+                entry.getValue().close();
+            } catch (Exception e) {
+                System.err.println("Error closing file: " + entry.getKey() + " - " + e.getMessage());
+            }
         }
     }
     
-    private void processRealModeMessages(String port_name, MsgRdr MR, LMDS_HDR LM, byte[] msg) {
-        if (MConfig.getFakeDatabase()) {
-            Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
-            String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-    
-            // Determine the file name and log number
-            String fileName = port_name + ".txt";
-            int logNumber = getNextLogNumber(fileName);
-    
-            appendToLogFile(fileName, concatenatedJson, logNumber);
-        } else {
-            String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + port_name
-                    + "' ORDER BY timestamp_pending_issued DESC";
-            List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
-                    MConfig.getDBUsername(), MConfig.getDBPassword());
-    
-            if (requestData.isEmpty()) {
-                return;
+    private void processRealModeMessages(String portName, MsgRdr MR, LMDS_HDR LM, byte[] msg) {
+        messageProcessingService.submit(() -> {
+            if (MConfig.getFakeDatabase()) {
+                Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+                String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
+        
+                // Determine the file name
+                String fileName = "msg" + portName + ".txt";
+                
+                appendToLogFile(fileName, concatenatedJson);
+            } else {
+                String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + portName
+                        + "' ORDER BY timestamp_pending_issued DESC";
+                List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
+                        MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+                if (requestData.isEmpty()) {
+                    return;
+                }
+        
+                String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
+                String readDataId = dataParts[0];
+                String requestPending = dataParts[1];
+        
+                if (!"1".equals(requestPending)) {
+                    return;
+                }
+        
+                Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+                String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
+                String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '"
+                        + concatenatedJson + "')";
+                Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(),
+                        MConfig.getDBPassword());
             }
-    
-            String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
-            String readDataId = dataParts[0];
-            String requestPending = dataParts[1];
-    
-            if (!"1".equals(requestPending)) {
-                return;
-            }
-    
-            Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
-            String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-            String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '"
-                    + concatenatedJson + "')";
-            Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(),
-                    MConfig.getDBPassword());
-        }
+        });
     }
     
 

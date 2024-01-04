@@ -51,4 +51,10 @@ public class Config {
     public static boolean getFakeDatabase() {
         return configData.optBoolean("FAKEDATABASE", false);
     }
+    public static void setAllParameters(String dbServer, String dbUsername, String dbPassword, boolean fakeDatabase) {
+        configData.put("DB_SERVER", dbServer);
+        configData.put("DB_USERNAME", dbUsername);
+        configData.put("DB_PASSWORD", dbPassword);
+        configData.put("FAKEDATABASE", fakeDatabase);
+    }
 }

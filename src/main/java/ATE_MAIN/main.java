@@ -112,11 +112,14 @@ public class main {
             Map<String, String> argMap = parseArguments(args);
 
 
-        
+            MConfig.setAllParameters(dbServer, dbUsername, dbPassword, fakeDatabase);
             MConfig.initialize(dbServer, dbUsername, dbPassword, fakeDatabase);
 
-            if (!App.unittest()) {
-                System.exit(1); // Exit if the unit test fails
+            if (!fakeDatabase) 
+            {
+                if (!App.unittest()) {
+                    System.exit(1); // Exit if the unit test fails
+                }
             }
         }
         
@@ -181,7 +184,7 @@ public class main {
                 System.err.println("Simulation file not found or is a directory: " + txGopherFile);
             }
         }  
-        else if(! CMN_GD.ATE_SIM_MODE && !MConfig.getFakeDatabase())
+        else if(! CMN_GD.ATE_SIM_MODE && !fakeDatabase)
             InitGOPHER_Sender();
         if(CMN_GD.RECORD_SENT_MSGS_IN_JSON) {
             to_LMDS_Json_Recorder = new To_LMDS_Json_Recorder(GOPHER_Json_out_folder_string);
