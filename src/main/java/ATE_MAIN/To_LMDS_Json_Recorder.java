@@ -31,7 +31,7 @@ public class To_LMDS_Json_Recorder {
     int counter = 0;
     public To_LMDS_Json_Recorder(String recording_file_folder_path) throws IOException {
         gson = new Gson();
-        Json_Recorder = new FileWriter(recording_file_folder_path+"/ToLMDS_Json.json", false);
+        Json_Recorder = new FileWriter(recording_file_folder_path+"/ToLMDS_JsonFromGopher.json", false);
     }
     public void Add_Json_Record(int port_ix, LMDS_HDR LMH, MessageBody MBDY) throws IOException {
         Record_Json_Object RJO = new Record_Json_Object(counter, port_ix, LMH, MBDY);

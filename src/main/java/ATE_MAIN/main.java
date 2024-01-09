@@ -31,6 +31,7 @@ import org.json.simple.parser.ParseException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -58,6 +59,14 @@ import com.yourcompany.app.Database;
 import com.yourcompany.app.MConfig;
 import java.util.List;
 
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.Collections;
+
 public class main {
     /**
      * Main class and entry point to the ATE_SIM program.
@@ -81,6 +90,7 @@ public class main {
     static JFrame frame;
     static int nports;
     public static JSONObject parameters=null;
+    // GOPHER parameters
     public static String dbServer = null;
     public static String dbUsername = null;
     public static String dbPassword = null;
@@ -207,81 +217,105 @@ public class main {
         }
     }
 
-    private static void InitGOPHER_Sender() {
+    private static void InitGOPHER_Sender() throws FileNotFoundException { //SF
         InitGOPHER_Sender(false, null, -1);
     }
 
-private static void InitGOPHER_Sender(boolean simulate, String filePath, int fileLine) {
-    Gson gson = new Gson();
-    ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-
-    Runnable task = () -> {
-        try {
-            if (simulate && filePath != null && fileLine >= 0) {
-                // Simulation mode: Read a specific line from the file and simulate sending a message
-                String lineData = readLineFromFile(filePath, fileLine);
-                JsonObject jsonObj = gson.fromJson(lineData, JsonObject.class);
-
-                int portIndex = jsonObj.get("port_ix").getAsInt();
-                EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("host_name").getAsString());
-                EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("process_name").getAsString());
-                EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("host_name").getAsString());
-                EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("process_name").getAsString());
-                EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.getAsJsonObject("LMH").get("msg_code").getAsString());
-
-                Address destAddress = new Address();
-                destAddress.host_name = destHostName;
-                destAddress.process_name = destProcessName;
-
-                Address sendAddress = new Address();
-                sendAddress.host_name = sendHostName;
-                sendAddress.process_name = sendProcessName;
-
-                MessageBody body = gson.fromJson(jsonObj.get("MBDY").toString(), MessageBody.class);
-
-                SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
-            } else {
-                // Regular operation: Query the database for outgoing messages
-                String query = "SELECT id, port_index, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
-                List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
-                for (String[] dataParts : messages) {
-                    int id = Integer.parseInt(dataParts[0]);
-                    int portIndex = Integer.parseInt(dataParts[1]);
-                    EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(dataParts[2]);
-                    EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(dataParts[3]);
-                    EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(dataParts[4]);
-                    EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(dataParts[5]);
-                    EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(dataParts[6]);
-
-                    Address destAddress = new Address();
-                    destAddress.host_name = destHostName;
-                    destAddress.process_name = destProcessName;
-
-                    Address sendAddress = new Address();
-                    sendAddress.host_name = sendHostName;
-                    sendAddress.process_name = sendProcessName;
-
-                    MessageBody body = gson.fromJson(dataParts[7], MessageBody.class);
-
-                    SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
-
-                    String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
-                    Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+    private static void InitGOPHER_Sender(boolean simulate, String filePath, int fileLine) throws FileNotFoundException {
+        Gson gson = new Gson();
+        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    
+        Runnable task = () -> {
+            try {
+                if (simulate && filePath != null && fileLine >= 0) {
+                    // Simulation mode: Read a specific line from the file and simulate sending a message
+                    String lineData = readLineFromFile(filePath, fileLine);
+                    JsonObject jsonObj = gson.fromJson(lineData, JsonObject.class);
+                    processAndSendMessage(gson, jsonObj);
+                } else {
+                    // Regular operation: Query the database for outgoing messages
+                    String query = "SELECT id, port_index, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
+                    List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+                    for (String[] dataParts : messages) {
+                        JsonObject jsonObj = new JsonObject();
+                        jsonObj.addProperty("port_ix", dataParts[1]);
+                        jsonObj.add("LMH", createAddressJson(dataParts[2], dataParts[3], dataParts[4], dataParts[5]));
+                        jsonObj.addProperty("msg_code", dataParts[6]);
+                        jsonObj.add("MBDY", gson.fromJson(dataParts[7], JsonObject.class));
+    
+                        processAndSendMessage(gson, jsonObj);
+    
+                        int id = Integer.parseInt(dataParts[0]);
+                        String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
+                        Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+                    }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        };
+    
+        if (simulate) {
+            executorService.submit(task);
+        } else {
+            executorService.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS);
         }
-    };
-
-    if (simulate) {
-        // Run once for simulation
-        executorService.submit(task);
-    } else {
-        // Schedule at fixed rate for regular operation
-        executorService.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS);
     }
-}
+    
+    private static void processAndSendMessage(Gson gson, JsonObject jsonObj) {
+    try {
+        int portIndex = jsonObj.get("port_ix").getAsInt();
+        EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("host_name").getAsString());
+        EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("process_name").getAsString());
+        EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("host_name").getAsString());
+        EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("process_name").getAsString());
+        EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.get("msg_code").getAsString());
+    
+        Address destAddress = new Address();
+        destAddress.host_name = destHostName;
+        destAddress.process_name = destProcessName;
+    
+        Address sendAddress = new Address();
+        sendAddress.host_name = sendHostName;
+        sendAddress.process_name = sendProcessName;
+    
+        Object body_class = GetBodyClassByMsgCode(msgCode);
+        MessageBody body = gson.fromJson(jsonObj.getAsJsonObject("MBDY"), (Type) body_class);
+        SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
+    } catch (IOException e) {
+        e.printStackTrace();
+        }
+    }
+    
+    private static JsonObject createAddressJson(String destHostName, String destProcessName, String sendHostName, String sendProcessName) {
+        JsonObject lmh = new JsonObject();
+        JsonObject destAddress = new JsonObject();
+        destAddress.addProperty("host_name", destHostName);
+        destAddress.addProperty("process_name", destProcessName);
+        JsonObject sendAddress = new JsonObject();
+        sendAddress.addProperty("host_name", sendHostName);
+        sendAddress.addProperty("process_name", sendProcessName);
+        lmh.add("dest_address", destAddress);
+        lmh.add("sender_address", sendAddress);
+        return lmh;
+    }
+
+    private static Object GetBodyClassByMsgCode(EnDef.msg_code_ce msgCode) {
+        //SF
+        switch(msgCode) {
+            case MSG_CODE_DS_CNTRL:             return  ds_cntrl.class;
+            case MSG_CODE_EO_CNTRL:             return  LM_Camera_Control.class;
+            case MSG_CODE_PRPLSN_CNTRL:         return  LM_Propulsion_Control.class;
+            case MSG_CODE_SER_COMM_TST:         return  srial_comms_tst.class;
+            case MSG_CODE_PWM_CNTRL_STTS:       return  pwm_cntrl_stts.class;
+            case MSG_CODE_DSCRT_CNTRL:          return  dscrt_cntrl.class;
+            case MSG_CODE_GET_DS_REVSN:         return  null; // only message code is sent
+            case MSG_CODE_WRITE_GET_CNFG_PARAM: return  config_param.class;
+            case MSG_CODE_SAVE_ALL_CNFG_PARAMS: return  null; // only message code is sent
+            case MSG_CODE_READ_CNFG_PARAM:      return  read_config_param.class;
+            default: return null;
+        }
+    }
 
 
     private static void InitPeriodicalTasks() throws URISyntaxException, IOException, ParseException {
@@ -325,13 +359,13 @@ private static void InitGOPHER_Sender(boolean simulate, String filePath, int fil
         GOPHER_Json_out_folder_string = (String)parameters.get("GOPHER_Json_out_folder");
         // add here an init for the FileWriters object to allow for json record writes to store sent out messages recordings (GOPHER use)
         // see CMN_GD for these object declarations
-        if (CMN_GD.ATE_SIM_MODE) {
+        if (! CMN_GD.ATE_SIM_MODE) { //SF added !
             dbServer = (String) parameters.get("dbServer");
             dbUsername = (String) parameters.get("dbUsername");
             dbPassword = (String) parameters.get("dbPassword");
             fakeDatabase = (boolean) parameters.get("fakeDatabase");
             txGopherFile = (String) parameters.get("txGopherFile");
-            txGopherLine = (int) parameters.get("txGopherLine");
+            txGopherLine = Integer.parseInt((String) parameters.get("txGopherLine")); //SF fixed bug
         }
         return;
     }

@@ -167,7 +167,8 @@ public class MessageListener implements SerialPortMessageListener {
         writeQueue.add(() -> {
             PrintWriter out = fileWriters.get(fileName);
             if (out != null) {
-                out.println(message + "\r\n");
+                //out.println(message + "\r\n"); //SF out.println already adds a carriage return
+                out.println(message);
                 out.flush(); // Ensure the message is written immediately
             } else {
                 System.err.println("FileWriter not initialized for: " + fileName);
@@ -267,13 +268,39 @@ public class MessageListener implements SerialPortMessageListener {
                 srial_comms_tst sct = new srial_comms_tst(mr);
                 bodyJsonString = gson.toJson(sct);
                 break;
-            case MSG_CODE_TX_GPS_UBLOX:
-                GPS_UBX_NAV gpsNav = new GPS_UBX_NAV(mr);
-                bodyJsonString = gson.toJson(gpsNav);
+            case MSG_CODE_INT_COMM_TST_RSLTS: //SF missing
+                Internal_comms_test_results ICTR = new Internal_comms_test_results(mr);
+                bodyJsonString = gson.toJson(ICTR);
                 break;
-            case MSG_CODE_TX_AHRS:
-                AHRS_System ahrsSystem = new AHRS_System(mr);
-                bodyJsonString = gson.toJson(ahrsSystem);
+            case MSG_CODE_EO_STTS:
+                MPU_GD.LMCS = new LM_Camera_Status(mr); //SF missing
+                bodyJsonString = gson.toJson(MPU_GD.LMCS);
+                break;
+            case MSG_CODE_WRITE_GET_CNFG_PARAM: //SF missing
+                config_param CP = new config_param(mr);
+                bodyJsonString = gson.toJson(CP);
+                break;
+            case MSG_CODE_TX_GPS_MPU:  //SF missing
+            case MSG_CODE_TX_GPS_UBLOX: //SF fixed bug
+                byte[] gps_msg_body = MessageBody.GetBytes(lm, msg);
+                LUMO_GD.gPS_UBX_Data.Update(gps_msg_body);
+                //GPS_UBX_NAV gpsNav = new GPS_UBX_NAV(mr);
+                bodyJsonString = gson.toJson(LUMO_GD.gPS_UBX_Data);
+                break;
+            case MSG_CODE_PRPLSN_STTS: //SF missing
+                PCM_GD.lM_Propulsion_Status = new LM_Propulsion_Status(mr);
+                bodyJsonString = gson.toJson(PCM_GD.lM_Propulsion_Status);
+                break;
+            case MSG_CODE_BATTERY_STTS: //SF missing
+                battery_stts BTS = new battery_stts(mr);
+                bodyJsonString = gson.toJson(BTS);
+                break;
+            case MSG_CODE_TX_AHRS: //SF fixed bug
+                byte[] AHRS_msg_body = MessageBody.GetBytes(lm, msg);
+                MPU_GD.NAVD.Update(AHRS_msg_body);
+                bodyJsonString = gson.toJson(MPU_GD.NAVD);
+                //AHRS_System ahrsSystem = new AHRS_System(mr);
+                //bodyJsonString = gson.toJson(ahrsSystem);
                 break;
             case MSG_CODE_UNKNOWN:
             default:
@@ -426,8 +453,8 @@ public class MessageListener implements SerialPortMessageListener {
                 break;
             case MSG_CODE_EO_STTS:
                 MPU_GD.LMCS = new LM_Camera_Status(MR);
-                byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
-                ProcessEOMessage(EO_msg_body);
+                //byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
+                //ProcessEOMessage(EO_msg_body);
                 break;
             case MSG_CODE_WRITE_GET_CNFG_PARAM:
                 config_param CP = new config_param(MR);
