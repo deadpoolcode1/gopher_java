@@ -185,15 +185,32 @@ public class main {
         if(CMN_GD.ATE_SIM_MODE)
             InitPeriodicalTasks();
         InitLAN_Port();
-        if (!CMN_GD.ATE_SIM_MODE && txGopherFile != null && !txGopherFile.isEmpty() && txGopherLine >= 0) {
+        if (!CMN_GD.ATE_SIM_MODE && txGopherFile != null && !txGopherFile.isEmpty()) {
             File file = new File(txGopherFile);
             if (file.exists() && !file.isDirectory()) {
                 // File exists and is not a directory; proceed with simulation
-                InitGOPHER_Sender(true, txGopherFile, txGopherLine);
+                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                    String lineData;
+                    while ((lineData = reader.readLine()) != null) {
+                        JsonObject jsonObj = new Gson().fromJson(lineData, JsonObject.class);
+                        int lineIndex = jsonObj.get("line_index").getAsInt();
+                        InitGOPHER_Sender(true, txGopherFile, lineIndex);
+        
+                        // Delay for 10 seconds before processing the next line
+                        try {
+                            TimeUnit.SECONDS.sleep(10);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt(); // restore interrupted status
+                            throw new RuntimeException("Thread interrupted while processing file", ie);
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("Error processing simulation file: " + e.getMessage());
+                }
             } else {
                 System.err.println("Simulation file not found or is a directory: " + txGopherFile);
             }
-        }  
+        } 
         else if(! CMN_GD.ATE_SIM_MODE && !fakeDatabase)
             InitGOPHER_Sender();
         if(CMN_GD.RECORD_SENT_MSGS_IN_JSON) {
