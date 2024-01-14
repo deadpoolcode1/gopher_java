@@ -58,12 +58,6 @@ import com.yourcompany.app.App;
 import com.yourcompany.app.Database;
 import com.yourcompany.app.MConfig;
 import java.util.List;
-
-
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collections;
 
@@ -286,8 +280,7 @@ public class main {
         EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("process_name").getAsString());
         EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("host_name").getAsString());
         EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("process_name").getAsString());
-        EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.get("msg_code").getAsString());
-    
+        EnDef.msg_code_ce msgCode =  EnDef.msg_code_ce.valueOf(jsonObj.getAsJsonObject("LMH").get("msg_code").getAsString());    
         Address destAddress = new Address();
         destAddress.host_name = destHostName;
         destAddress.process_name = destProcessName;
