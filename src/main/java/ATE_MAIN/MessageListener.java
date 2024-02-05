@@ -202,7 +202,7 @@ public class MessageListener implements SerialPortMessageListener {
                 
                 appendToLogFile(fileName, concatenatedJson);
             } else {
-                String checkRequestPendingQuery = "SELECT id, request_pending FROM read_data WHERE com = '" + portName
+                String checkRequestPendingQuery = "SELECT id FROM read_data WHERE com = '" + portName
                         + "' ORDER BY timestamp_pending_issued DESC";
                 List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
                         MConfig.getDBUsername(), MConfig.getDBPassword());
@@ -211,9 +211,16 @@ public class MessageListener implements SerialPortMessageListener {
                     return;
                 }
         
-                String[] dataParts = requestData.get(0).split(","); // Assuming the data comes comma-separated
-                String readDataId = dataParts[0];
-                String requestPending = dataParts[1];
+                String readDataId = requestData.getFirst();
+                checkRequestPendingQuery = "SELECT request_pending FROM read_data WHERE com = '" + portName
+                        + "' ORDER BY timestamp_pending_issued DESC";
+                requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
+                        MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+                if (requestData.isEmpty()) {
+                    return;
+                }
+                String requestPending = requestData.getLast();
         
                 if (!"1".equals(requestPending)) {
                     return;
