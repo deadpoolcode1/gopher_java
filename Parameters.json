@@ -18,11 +18,11 @@
   "GDT_PASSWORD": "NONE",
   "ADT_STREAMING_PORT": "2345",
   "GDT_STREAMING_PORT": "2346",
-  "GOPHER_Json_out_folder": "/tmp/",
-  "dbServer": "localhost",
+  "GOPHER_Json_out_folder": "C:/work/out_messages/",
+  "dbServer": "UVISION-1\\SQLEXPRESS",
   "dbUsername": "SA",
-  "dbPassword": "dbPassword",
-  "fakeDatabase": true,
-  "txGopherFile": "/home/administrator/java/gopher/messages/ToLMDS_Json.json",
+  "dbPassword": "s6399812",
+  "fakeDatabase": false,
+  "txGopherFile": "",
   "txGopherLine": "0"
 }
