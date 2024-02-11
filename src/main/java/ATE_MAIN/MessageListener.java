@@ -21,6 +21,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.concurrent.*;
 import java.util.Map;
+import java.util.LinkedList;
 
 public class MessageListener implements SerialPortMessageListener {
     static final int MAX_LENGTH = 248;
