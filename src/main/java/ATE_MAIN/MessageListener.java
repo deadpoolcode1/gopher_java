@@ -211,8 +211,7 @@ public class MessageListener implements SerialPortMessageListener {
                 if (requestData.isEmpty()) {
                     return;
                 }
-        
-                String readDataId = requestData.getFirst();
+                String readDataId = requestData.get(0);
                 checkRequestPendingQuery = "SELECT request_pending FROM read_data WHERE com = '" + portName
                         + "' ORDER BY timestamp_pending_issued DESC";
                 requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
@@ -221,7 +220,7 @@ public class MessageListener implements SerialPortMessageListener {
                 if (requestData.isEmpty()) {
                     return;
                 }
-                String requestPending = requestData.getLast();
+                String requestPending = requestData.get(0);
         
                 if (!"1".equals(requestPending)) {
                     return;
