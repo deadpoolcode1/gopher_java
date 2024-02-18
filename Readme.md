@@ -109,17 +109,17 @@ export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.
 source ~/.bashrc
 
 
-#maven local install
+# maven local install
 
 mvn install:install-file -Dfile=/home/administrator/java/gopher/IP_Radio_Interface.jar -DgroupId=local -DartifactId=ip-radio-interface -Dversion=1.0 -Dpackaging=jar
 
-##maven create deploy
+## maven create deploy
 
 mvn clean install
 
 mvn clean compile assembly:single
 
-##maven run on windows PC
+## maven run on windows PC
 
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://
 
