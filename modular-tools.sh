@@ -210,6 +210,15 @@ draw_data() {
     echo "----------------------------------------------"
 }
 
+create_mvn_package()
+{
+	mvn clean compile assembly:single
+}
+
+run_mvn()
+{
+	mvn exec:java -Dexec.mainClass="ATE_MAIN.main" -Dexec.jvmArgs="-agentlib:jdwp=transport=dt_socket,server=n,suspend=y,address=localhost:39037"
+}
 
 
 help()
@@ -219,6 +228,8 @@ help()
 	echo "database_create_initial_table - create first database"
     echo "database_clear_initial_table - totaly delete Gopher database"
 	echo "draw_data - draw database scheme"
+	echo "create_mvn_package"
+	echo "run_mvn"
 }
 
 if [ -n "$*" ]; then
