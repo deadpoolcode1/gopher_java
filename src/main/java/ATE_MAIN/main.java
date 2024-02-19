@@ -383,20 +383,51 @@ public class main {
         return;
     }
 
+    private static int getBaudRateForPort(String portName) {
+        String query = "SELECT baud_rate FROM read_data WHERE com LIKE '%" + portName + "%';";
+        List<String> baudRateData = Database.executeQuery("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+        if (!baudRateData.isEmpty()) {
+            try {
+                return Integer.parseInt(baudRateData.get(0));
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid baud rate format for port " + portName);
+                return -1; // Indicate error or invalid format
+            }
+        } else {
+            return -1; // Indicate not found
+        }
+    }
+
     private static void InitSerialCommPorts() {
         comPorts = SerialPort.getCommPorts();
-        nports = Math.min(comPorts.length, 10); // allow up to 10 ports, numbered 0-9
+        nports = Math.min(comPorts.length, 30); // allow up to 10 ports, numbered 0-9
         String[] port_names = new String[nports];
-        MessageListener listeners[] = new MessageListener[nports];
+        MessageListener[] listeners = new MessageListener[nports];
         System.out.println("List of available serial comm ports:");
         for(int i=0; i<nports; i++) {
-            comPorts[i].openPort();
-            comPorts[i].setComPortParameters(115200, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
-            comPorts[i].setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 2000, 2000);
-            listeners[i] = new MessageListener(i);
-            comPorts[i].addDataListener(listeners[i]);
-            port_names[i] = new String(comPorts[i].getSystemPortName());
-            System.out.println("Serial port #" + i+",  "+comPorts[i].getDescriptivePortName()); // todo restore to service if not lan used for it
+            String portName = comPorts[i].getSystemPortName();
+            
+            // Fetch baud rate from the database for the current port
+            int baudRate = getBaudRateForPort(portName);
+            if (baudRate == -1) {
+                System.out.println("Skipping " + portName + " as it is not configured in the database.");
+                continue;
+            }
+            else
+                System.out.println("Skipping " + portName + " as it is configured in the database.");
+    
+            
+            if(comPorts[i].openPort()) {
+                comPorts[i].setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
+                comPorts[i].setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 2000, 2000);
+                listeners[i] = new MessageListener(i);
+                comPorts[i].addDataListener(listeners[i]);
+                port_names[i] = portName;
+                System.out.println("Configured serial port #" + i + ", " + comPorts[i].getDescriptivePortName() + " with baud rate: " + baudRate);
+            } else {
+                System.out.println("Failed to open serial port " + portName);
+            }
         }
         if (CMN_GD.ATE_SIM_MODE) {
             // this test program supports up to 2 ports. Manualy Identify the service and other port
