@@ -60,6 +60,8 @@ import com.yourcompany.app.MConfig;
 import java.util.List;
 import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class main {
     /**
@@ -405,17 +407,23 @@ public class main {
         String[] port_names = new String[nports];
         MessageListener[] listeners = new MessageListener[nports];
         System.out.println("List of available serial comm ports:");
+        String comPort = "";
         for(int i=0; i<nports; i++) {
-            String portName = comPorts[i].getSystemPortName();
-            
+            String portName = comPorts[i].getDescriptivePortName();
+            Pattern pattern = Pattern.compile("COM\\d{1,2}");
+            Matcher matcher = pattern.matcher(portName);
+            if (matcher.find()) {
+                comPort = matcher.group(); // This will give you "COM16" for the example
+                // Continue with your database query using this comPort value
+            }
             // Fetch baud rate from the database for the current port
-            int baudRate = getBaudRateForPort(portName);
+            int baudRate = getBaudRateForPort(comPort);
             if (baudRate == -1) {
-                System.out.println("Skipping " + portName + " as it is not configured in the database.");
+                System.out.println("Skipping " + comPort + " as it is not configured in the database.");
                 continue;
             }
             else
-                System.out.println("Skipping " + portName + " as it is configured in the database.");
+                System.out.println("opening " + comPort + " as it is configured in the database.");
     
             
             if(comPorts[i].openPort()) {
@@ -423,7 +431,7 @@ public class main {
                 comPorts[i].setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 2000, 2000);
                 listeners[i] = new MessageListener(i);
                 comPorts[i].addDataListener(listeners[i]);
-                port_names[i] = portName;
+                port_names[i] = comPort;
                 System.out.println("Configured serial port #" + i + ", " + comPorts[i].getDescriptivePortName() + " with baud rate: " + baudRate);
             } else {
                 System.out.println("Failed to open serial port " + portName);
