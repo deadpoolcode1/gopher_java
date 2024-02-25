@@ -128,6 +128,15 @@ choco install openjdk17
 
 choco install maven
 
+create directory with the files:
+
+gopher-1.0-SNAPSHOT-jar-with-dependencies.jar
+
+Parameters.json
+
+
+run using: 
+
 java -jar gopher-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 ## Release notes
