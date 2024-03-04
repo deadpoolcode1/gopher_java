@@ -386,12 +386,12 @@ public class main {
     }
 
     private static int getBaudRateForPort(String portName) {
-        String query = "SELECT baud_rate FROM read_data WHERE com LIKE '%" + portName + "%';";
+        String query = "SELECT BaudRate FROM Comm WHERE NAME LIKE '%" + portName + "%';";
         List<String> baudRateData = Database.executeQuery("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
         
         if (!baudRateData.isEmpty()) {
             try {
-                return Integer.parseInt(baudRateData.get(0));
+                return Integer.parseInt(baudRateData.get(0).trim());
             } catch (NumberFormatException e) {
                 System.err.println("Invalid baud rate format for port " + portName);
                 return -1; // Indicate error or invalid format
@@ -400,6 +400,74 @@ public class main {
             return -1; // Indicate not found
         }
     }
+    
+    private static int getDataBitsForPort(String portName) {
+        String query = "SELECT Data_Bits FROM Comm WHERE NAME LIKE '%" + portName + "%';";
+        List<String> dataBitsData = Database.executeQuery("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+        if (!dataBitsData.isEmpty()) {
+            try {
+                return Integer.parseInt(dataBitsData.get(0).trim());
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid data bits format for port " + portName);
+                return -1; // Indicate error or invalid format
+            }
+        } else {
+            return -1; // Indicate not found
+        }
+    }
+    
+
+    
+    private static int getParityForPort(String portName) {
+        String query = "SELECT Parity FROM Comm WHERE NAME LIKE '%" + portName + "%';";
+        List<String> parityData = Database.executeQuery("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+        if (!parityData.isEmpty()) {
+            String parity = parityData.get(0).trim().toUpperCase(); // Adjust here for case insensitivity and trim spaces
+            switch (parity) {
+                case "NONE":
+                    return SerialPort.NO_PARITY;
+                case "EVEN":
+                    return SerialPort.EVEN_PARITY;
+                case "ODD":
+                    return SerialPort.ODD_PARITY;
+                case "MARK":
+                    return SerialPort.MARK_PARITY;
+                case "SPACE":
+                    return SerialPort.SPACE_PARITY;
+                default:
+                    System.err.println("Unknown parity setting for port " + portName + ": " + parity);
+                    return -1;
+            }
+        } else {
+            return -1; // Indicate not found
+        }
+    }
+    
+
+    private static int getStopBitsForPort(String portName) {
+        String query = "SELECT Stop_Bits FROM Comm WHERE NAME LIKE '%" + portName + "%';";
+        List<String> stopBitsData = Database.executeQuery("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+        
+        if (!stopBitsData.isEmpty()) {
+            String stopBits = stopBitsData.get(0).trim(); // Trim spaces
+            switch (stopBits) {
+                case "1":
+                    return SerialPort.ONE_STOP_BIT;
+                case "1.5":
+                    return SerialPort.ONE_POINT_FIVE_STOP_BITS;
+                case "2":
+                    return SerialPort.TWO_STOP_BITS;
+                default:
+                    System.err.println("Unknown stop bits setting for port " + portName + ": " + stopBits);
+                    return -1;
+            }
+        } else {
+            return -1; // Indicate not found
+        }
+    }
+    
 
     private static void InitSerialCommPorts() {
         comPorts = SerialPort.getCommPorts();
@@ -417,17 +485,21 @@ public class main {
                 // Continue with your database query using this comPort value
             }
             // Fetch baud rate from the database for the current port
-            int baudRate = getBaudRateForPort(comPort);
-            if (baudRate == -1) {
+                int baudRate = getBaudRateForPort(comPort);
+                int dataBits = getDataBitsForPort(comPort);
+                int parity = getParityForPort(comPort);
+                int stopBits = getStopBitsForPort(comPort);
+           if (!(baudRate != -1 && dataBits != -1 && parity != -1 && stopBits != -1)) {
                 System.out.println("Skipping " + comPort + " as it is not configured in the database.");
                 continue;
             }
-            else
+            else {
                 System.out.println("opening " + comPort + " as it is configured in the database.");
-    
-            
+            }
+
+
             if(comPorts[i].openPort()) {
-                comPorts[i].setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY);
+                comPorts[i].setComPortParameters(baudRate, dataBits, stopBits, parity);
                 comPorts[i].setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 2000, 2000);
                 listeners[i] = new MessageListener(i);
                 comPorts[i].addDataListener(listeners[i]);
