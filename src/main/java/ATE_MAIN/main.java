@@ -252,10 +252,7 @@ public class main {
                     List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                     for (String[] dataParts : messages) {
                         JsonObject jsonObj = new JsonObject();
-                        jsonObj.addProperty("port_ix", dataParts[1]);
-                        jsonObj.add("LMH", createAddressJson(dataParts[2], dataParts[3], dataParts[4], dataParts[5]));
-                        jsonObj.addProperty("msg_code", dataParts[6]);
-                        jsonObj.add("MBDY", gson.fromJson(dataParts[7], JsonObject.class));
+                        jsonObj.add("MESSAGE_BODY", gson.fromJson(dataParts[7], JsonObject.class));
     
                         processAndSendMessage(gson, jsonObj);
     
@@ -278,13 +275,39 @@ public class main {
     
     private static void processAndSendMessage(Gson gson, JsonObject jsonObj) {
     try {
-        int portIndex = jsonObj.get("port_ix").getAsInt();
-        EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("host_name").getAsString());
-        EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("dest_address").get("process_name").getAsString());
-        EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("host_name").getAsString());
-        EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(jsonObj.getAsJsonObject("LMH").getAsJsonObject("sender_address").get("process_name").getAsString());
-        EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.get("msg_code").getAsString());
-        //EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(jsonObj.get("msg_code").getAsString());
+// Access the "port_ix" within the "MBDY" object now
+int portIndex = jsonObj.getAsJsonObject("MESSAGE_BODY").get("port_ix").getAsInt();
+
+// The "LMH" object is still within "MBDY", adjust the path accordingly
+EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(
+    jsonObj.getAsJsonObject("MESSAGE_BODY")
+        .getAsJsonObject("LMH")
+        .getAsJsonObject("dest_address")
+        .get("host_name").getAsString());
+
+EnDef.process_name_ce destProcessName = EnDef.process_name_ce.valueOf(
+    jsonObj.getAsJsonObject("MESSAGE_BODY")
+        .getAsJsonObject("LMH")
+        .getAsJsonObject("dest_address")
+        .get("process_name").getAsString());
+
+EnDef.host_name_ce sendHostName = EnDef.host_name_ce.valueOf(
+    jsonObj.getAsJsonObject("MESSAGE_BODY")
+        .getAsJsonObject("LMH")
+        .getAsJsonObject("sender_address")
+        .get("host_name").getAsString());
+
+EnDef.process_name_ce sendProcessName = EnDef.process_name_ce.valueOf(
+    jsonObj.getAsJsonObject("MESSAGE_BODY")
+        .getAsJsonObject("LMH")
+        .getAsJsonObject("sender_address")
+        .get("process_name").getAsString());
+
+// "msg_code" is still directly under "LMH", so adjust the path but the retrieval remains the same
+EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
+    jsonObj.getAsJsonObject("MESSAGE_BODY")
+        .getAsJsonObject("LMH")
+        .get("msg_code").getAsString());
     
         Address destAddress = new Address();
         destAddress.host_name = destHostName;
@@ -295,7 +318,15 @@ public class main {
         sendAddress.process_name = sendProcessName;
     
         Object body_class = GetBodyClassByMsgCode(msgCode);
-        MessageBody body = gson.fromJson(jsonObj.getAsJsonObject("MBDY"), (Type) body_class);
+    // Print the JSON string that is about to be parsed
+    System.out.println("Parsing JSON for MessageBody: " + jsonObj.getAsJsonObject("MESSAGE_BODY").toString());
+
+    // Attempt to parse the JSON to the specified body_class
+    MessageBody body = gson.fromJson(jsonObj.getAsJsonObject("MESSAGE_BODY"), (Type) body_class);
+
+    // If parsing is successful, print a success message and the parsed object (optional)
+    System.out.println("Parsing successful. Parsed MessageBody: " + body.toString());
+
         SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
     } catch (IOException e) {
         e.printStackTrace();
