@@ -235,6 +235,22 @@ public class main {
         InitGOPHER_Sender(false, null, -1);
     }
 
+    public static int getPortIndexFromCOMIdentifier(String comPortIdentifier) {
+        SerialPort[] comPorts = SerialPort.getCommPorts();
+        Pattern pattern = Pattern.compile(comPortIdentifier, Pattern.CASE_INSENSITIVE);
+        
+        for (int i = 0; i < comPorts.length; i++) {
+            String descriptivePortName = comPorts[i].getDescriptivePortName();
+            Matcher matcher = pattern.matcher(descriptivePortName);
+            if (matcher.find()) {
+                // If the COM port identifier is found within the descriptive name, return the index
+                return i;
+            }
+        }
+        // Return -1 if no matching COM port is found
+        return -1;
+    }
+
     private static void InitGOPHER_Sender(boolean simulate, String filePath, int fileLine) throws FileNotFoundException {
         Gson gson = new Gson();
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -245,16 +261,16 @@ public class main {
                     // Simulation mode: Read a specific line from the file and simulate sending a message
                     String lineData = readLineFromFile(filePath, fileLine);
                     JsonObject jsonObj = gson.fromJson(lineData, JsonObject.class);
-                    processAndSendMessage(gson, jsonObj);
+                    processAndSendMessage(gson, jsonObj, 1);
                 } else {
                     // Regular operation: Query the database for outgoing messages
-                    String query = "SELECT id, port_index, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
+                    String query = "SELECT id, com, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
                     List<String[]> messages = Database.executeQueryMulti("my_data", query, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                     for (String[] dataParts : messages) {
                         JsonObject jsonObj = new JsonObject();
                         jsonObj.add("MESSAGE_BODY", gson.fromJson(dataParts[7], JsonObject.class));
-    
-                        processAndSendMessage(gson, jsonObj);
+                        int portIndex = getPortIndexFromCOMIdentifier(dataParts[1]);
+                        processAndSendMessage(gson, jsonObj, portIndex);
     
                         int id = Integer.parseInt(dataParts[0]);
                         String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
@@ -273,10 +289,9 @@ public class main {
         }
     }
     
-    private static void processAndSendMessage(Gson gson, JsonObject jsonObj) {
+    private static void processAndSendMessage(Gson gson, JsonObject jsonObj, int portIndex) {
     try {
 // Access the "port_ix" within the "MBDY" object now
-int portIndex = jsonObj.getAsJsonObject("MESSAGE_BODY").get("port_ix").getAsInt();
 
 // The "LMH" object is still within "MBDY", adjust the path accordingly
 EnDef.host_name_ce destHostName = EnDef.host_name_ce.valueOf(
