@@ -322,12 +322,12 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
     System.out.println("Parsing JSON for MessageBody: " + jsonObj.getAsJsonObject("MESSAGE_BODY").toString());
 
     // Attempt to parse the JSON to the specified body_class
-    MessageBody body = gson.fromJson(jsonObj.getAsJsonObject("MESSAGE_BODY"), (Type) body_class);
+    body_class = gson.fromJson(jsonObj.getAsJsonObject("MESSAGE_BODY").getAsJsonObject("MBDY"), (Type) body_class);
 
     // If parsing is successful, print a success message and the parsed object (optional)
-    System.out.println("Parsing successful. Parsed MessageBody: " + body.toString());
+    System.out.println("Parsing successful. Parsed MessageBody: " + body_class.toString());
 
-        SendMessage(portIndex, destAddress, sendAddress, msgCode, body);
+        SendMessage(portIndex, destAddress, sendAddress, msgCode, (MessageBody)body_class);
     } catch (IOException e) {
         e.printStackTrace();
         }
