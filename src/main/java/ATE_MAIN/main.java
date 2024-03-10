@@ -53,6 +53,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import com.yourcompany.app.App;
 import com.yourcompany.app.Database;
@@ -273,7 +275,10 @@ public class main {
                         processAndSendMessage(gson, jsonObj, portIndex);
     
                         int id = Integer.parseInt(dataParts[0]);
-                        String updateQuery = "UPDATE write_data SET request_pending = 0 WHERE id = " + id;
+                        LocalDateTime now = LocalDateTime.now();
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        String formattedNow = now.format(formatter);
+                        String updateQuery = "UPDATE write_data SET request_pending = 0, timestamp_pending_process = '" + formattedNow + "' WHERE id = " + id;
                         Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
                     }
                 }
@@ -514,6 +519,20 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
         }
     }
     
+
+    private static void updateTimestampForPort(String portName) {
+        // Format the current timestamp
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String formattedNow = now.format(formatter);
+    
+        // Assuming you can uniquely identify the record to update by portName
+        // Update the timestamp for the matched port
+        String updateQuery = "UPDATE read_data_info SET timestamp_reply_acknowledged = '" + formattedNow + 
+                             "' WHERE com LIKE '%" + portName + "%';"; // Replace port_name_column with the actual column name
+    
+        Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+    }
 
     private static void InitSerialCommPorts() {
         comPorts = SerialPort.getCommPorts();
