@@ -263,7 +263,7 @@ public class main {
                     // Simulation mode: Read a specific line from the file and simulate sending a message
                     String lineData = readLineFromFile(filePath, fileLine);
                     JsonObject jsonObj = gson.fromJson(lineData, JsonObject.class);
-                    processAndSendMessage(gson, jsonObj, 1);
+                    processAndSendMessage(gson, jsonObj, 1, 0);
                 } else {
                     // Regular operation: Query the database for outgoing messages
                     String query = "SELECT id, com, dest_host_name, dest_process_name, send_host_name, send_process_name, msg_code, body_content FROM write_data WHERE request_pending = 1";
@@ -272,9 +272,9 @@ public class main {
                         JsonObject jsonObj = new JsonObject();
                         jsonObj.add("MESSAGE_BODY", gson.fromJson(dataParts[7], JsonObject.class));
                         int portIndex = getPortIndexFromCOMIdentifier(dataParts[1]);
-                        processAndSendMessage(gson, jsonObj, portIndex);
-    
                         int id = Integer.parseInt(dataParts[0]);
+                        processAndSendMessage(gson, jsonObj, portIndex, id);
+    
                         LocalDateTime now = LocalDateTime.now();
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
                         String formattedNow = now.format(formatter);
@@ -294,7 +294,7 @@ public class main {
         }
     }
     
-    private static void processAndSendMessage(Gson gson, JsonObject jsonObj, int portIndex) {
+    private static void processAndSendMessage(Gson gson, JsonObject jsonObj, int portIndex, int id) {
     try {
 // Access the "port_ix" within the "MBDY" object now
 
@@ -347,7 +347,7 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
     // If parsing is successful, print a success message and the parsed object (optional)
     System.out.println("Parsing successful. Parsed MessageBody: " + body_class.toString());
 
-        SendMessage(portIndex, destAddress, sendAddress, msgCode, (MessageBody)body_class);
+        SendMessage(portIndex, destAddress, sendAddress, msgCode, (MessageBody)body_class, id);
     } catch (IOException e) {
         e.printStackTrace();
         }
@@ -610,7 +610,7 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
     }
 
     public static void SendMessage
-            (int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body) throws IOException {
+            (int port_ix, Address dest_ad, Address send_ad, EnDef.msg_code_ce msg_code, MessageBody body, int id) throws IOException {
         // builds a standard ATE message and sends it over the deignated port. body may be null. Other parameters must be non-null.
         // when in Json out recording mode, also record the outgoing message to a Json logger
         int len=0;
@@ -639,9 +639,15 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
         // up to 9 serial comm ports supported (=LAN_PORT_ID-1)
         if(port_ix < comPorts.length) {
             int return_code = comPorts[port_ix].writeBytes(txbuf, (long) len);
+            int err_code = 0;
             if(return_code != len) {
                 System.out.println("Main: Error sending to serial port: "+comPorts[port_ix].getDescriptivePortName()+"  Code="+return_code);
+                // Execute the update query
+                err_code = -1;
             }
+            String updateQuery = "UPDATE write_data SET error_code = " + err_code +"WHERE id = '" + id + "'";
+            Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
+            
         }
         if(port_ix == LAN_PORT_ID )
             // send to the adressee over the LAN
