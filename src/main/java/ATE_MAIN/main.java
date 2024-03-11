@@ -528,7 +528,7 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
     
         // Assuming you can uniquely identify the record to update by portName
         // Update the timestamp for the matched port
-        String updateQuery = "UPDATE read_data_info SET timestamp_reply_acknowledged = '" + formattedNow + 
+        String updateQuery = "UPDATE read_data SET timestamp_reply_acknowledged = '" + formattedNow + 
                              "' WHERE com LIKE '%" + portName + "%';"; // Replace port_name_column with the actual column name
     
         Database.executeNonQuery("my_data", updateQuery, MConfig.getDBServer(), MConfig.getDBUsername(), MConfig.getDBPassword());
@@ -569,6 +569,7 @@ EnDef.msg_code_ce msgCode = EnDef.msg_code_ce.valueOf(
                 listeners[i] = new MessageListener(i);
                 comPorts[i].addDataListener(listeners[i]);
                 port_names[i] = comPort;
+                updateTimestampForPort(comPort);
                 System.out.println("Configured serial port #" + i + ", " + comPorts[i].getDescriptivePortName() + " with baud rate: " + baudRate);
             } else {
                 System.out.println("Failed to open serial port " + portName);
