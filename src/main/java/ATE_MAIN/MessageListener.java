@@ -227,9 +227,14 @@ public class MessageListener implements SerialPortMessageListener {
                 }
         
                 Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
+                int err_code = 0;
+                if ("-1".equals(decodedMessage.getRight()))
+                {
+                    err_code = -1;
+                }
                 String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-                String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('" + readDataId + "', '"
-                        + concatenatedJson + "')";
+                String insertQuery = "INSERT INTO read_data_info (read_data_id, data, error_code) VALUES ('" + readDataId + "', '"
+                        + concatenatedJson + "," + err_code +"')";
                 Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(),
                         MConfig.getDBPassword());
             }
@@ -312,6 +317,7 @@ public class MessageListener implements SerialPortMessageListener {
             case MSG_CODE_UNKNOWN:
             default:
                 System.out.println("Unknown or unhandled message code: " + lm.msg_code);
+                bodyJsonString = "-1";
                 break;
         }
 
