@@ -32,7 +32,7 @@ public class MessageListener implements SerialPortMessageListener {
     int port_index = -1;
     static byte[] delimiter = { (byte) 0xca, (byte) 0xfe, (byte) 0x2d, (byte) 0xad };
 
-    private static final ExecutorService messageProcessingService = Executors.newFixedThreadPool(10); 
+    private static final ExecutorService messageProcessingService = Executors.newFixedThreadPool(10);
     private static final BlockingQueue<Runnable> writeQueue = new LinkedBlockingQueue<>();
     private static final ConcurrentMap<String, PrintWriter> fileWriters = new ConcurrentHashMap<>();
 
@@ -92,7 +92,7 @@ public class MessageListener implements SerialPortMessageListener {
             processRealModeMessages(portName, MR, LM, msg); // Define this method to handle real mode messages
         }
     }
-    
+
     private void processSimulatedModeMessages(MsgRdr MR, LMDS_HDR LM, byte[] msg, String port_name) {
         switch (LM.dest_address.process_name) {
             case PR_ATE_TF1:
@@ -114,7 +114,7 @@ public class MessageListener implements SerialPortMessageListener {
         }
     }
 
-    public static  synchronized int getNextLogNumber(String fileName) {
+    public static synchronized int getNextLogNumber(String fileName) {
         // Synchronized to avoid concurrent access issues
         try {
             File file = new File(fileName);
@@ -134,7 +134,7 @@ public class MessageListener implements SerialPortMessageListener {
             return 1; // default to 1 on any error
         }
     }
-    
+
     static {
         Thread fileWriterThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
@@ -154,7 +154,8 @@ public class MessageListener implements SerialPortMessageListener {
     private static void appendToLogFile(String fileName, String message) {
         fileWriters.computeIfAbsent(fileName, k -> {
             try {
-                // Open the file in overwrite mode if it's the first write, otherwise in append mode
+                // Open the file in overwrite mode if it's the first write, otherwise in append
+                // mode
                 FileWriter fw = new FileWriter(k, !isFirstWrite);
                 BufferedWriter bw = new BufferedWriter(fw);
                 return new PrintWriter(bw);
@@ -168,7 +169,8 @@ public class MessageListener implements SerialPortMessageListener {
         writeQueue.add(() -> {
             PrintWriter out = fileWriters.get(fileName);
             if (out != null) {
-                //out.println(message + "\r\n"); //SF out.println already adds a carriage return
+                // out.println(message + "\r\n"); //SF out.println already adds a carriage
+                // return
                 out.println(message);
                 out.flush(); // Ensure the message is written immediately
             } else {
@@ -191,23 +193,24 @@ public class MessageListener implements SerialPortMessageListener {
             }
         }
     }
-    
+
     private void processRealModeMessages(String portName, MsgRdr MR, LMDS_HDR LM, byte[] msg) {
         messageProcessingService.submit(() -> {
             if (MConfig.getFakeDatabase()) {
                 Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
                 String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-        
+
                 // Determine the file name
                 String fileName = "msg" + portName + ".txt";
-                
+
                 appendToLogFile(fileName, concatenatedJson);
             } else {
                 String checkRequestPendingQuery = "SELECT id FROM read_data WHERE com = '" + portName
                         + "' ORDER BY timestamp_pending_issued DESC";
-                List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
+                List<String> requestData = Database.executeQuery("my_data", checkRequestPendingQuery,
+                        MConfig.getDBServer(),
                         MConfig.getDBUsername(), MConfig.getDBPassword());
-        
+
                 if (requestData.isEmpty()) {
                     return;
                 }
@@ -216,31 +219,35 @@ public class MessageListener implements SerialPortMessageListener {
                         + "' ORDER BY timestamp_pending_issued DESC";
                 requestData = Database.executeQuery("my_data", checkRequestPendingQuery, MConfig.getDBServer(),
                         MConfig.getDBUsername(), MConfig.getDBPassword());
-        
+
                 if (requestData.isEmpty()) {
                     return;
                 }
                 String requestPending = requestData.get(0);
-        
+
                 if (!"1".equals(requestPending)) {
                     return;
                 }
-        
+
                 Pair<String, String> decodedMessage = Decode_Msg_Into_Json_String(port_index, MR, LM, msg);
                 int err_code = 0;
-                if ("-1".equals(decodedMessage.getRight()))
-                {
+                if ("-1".equals(decodedMessage.getRight())) {
                     err_code = -1;
                 }
                 String concatenatedJson = decodedMessage.getLeft() + decodedMessage.getRight();
-                String insertQuery = "INSERT INTO read_data_info (read_data_id, data, error_code) VALUES ('" + readDataId + "', '"
-                        + concatenatedJson + "," + err_code +"')";
+                String insertQuery = "INSERT INTO read_data_info (read_data_id, data) VALUES ('"
+                        + readDataId + "', '"
+                        + concatenatedJson +"')";
                 Database.executeNonQuery("my_data", insertQuery, MConfig.getDBServer(), MConfig.getDBUsername(),
+                        MConfig.getDBPassword());
+                String insertQuery2 = "INSERT INTO read_data_info (read_data_id, error_code) VALUES ('"
+                        + readDataId + "', '"
+                        + err_code + "')";
+                Database.executeNonQuery("my_data", insertQuery2, MConfig.getDBServer(), MConfig.getDBUsername(),
                         MConfig.getDBPassword());
             }
         });
     }
-    
 
     private Pair<String, String> Decode_Msg_Into_Json_String(int portIndex, MsgRdr mr, LMDS_HDR lm, byte[] msg) {
         Gson gson = new Gson();
@@ -280,39 +287,39 @@ public class MessageListener implements SerialPortMessageListener {
                 srial_comms_tst sct = new srial_comms_tst(mr);
                 bodyJsonString = gson.toJson(sct);
                 break;
-            case MSG_CODE_INT_COMM_TST_RSLTS: //SF missing
+            case MSG_CODE_INT_COMM_TST_RSLTS: // SF missing
                 Internal_comms_test_results ICTR = new Internal_comms_test_results(mr);
                 bodyJsonString = gson.toJson(ICTR);
                 break;
             case MSG_CODE_EO_STTS:
-                MPU_GD.LMCS = new LM_Camera_Status(mr); //SF missing
+                MPU_GD.LMCS = new LM_Camera_Status(mr); // SF missing
                 bodyJsonString = gson.toJson(MPU_GD.LMCS);
                 break;
-            case MSG_CODE_WRITE_GET_CNFG_PARAM: //SF missing
+            case MSG_CODE_WRITE_GET_CNFG_PARAM: // SF missing
                 config_param CP = new config_param(mr);
                 bodyJsonString = gson.toJson(CP);
                 break;
-            case MSG_CODE_TX_GPS_MPU:  //SF missing
-            case MSG_CODE_TX_GPS_UBLOX: //SF fixed bug
+            case MSG_CODE_TX_GPS_MPU: // SF missing
+            case MSG_CODE_TX_GPS_UBLOX: // SF fixed bug
                 byte[] gps_msg_body = MessageBody.GetBytes(lm, msg);
                 LUMO_GD.gPS_UBX_Data.Update(gps_msg_body);
-                //GPS_UBX_NAV gpsNav = new GPS_UBX_NAV(mr);
+                // GPS_UBX_NAV gpsNav = new GPS_UBX_NAV(mr);
                 bodyJsonString = gson.toJson(LUMO_GD.gPS_UBX_Data);
                 break;
-            case MSG_CODE_PRPLSN_STTS: //SF missing
+            case MSG_CODE_PRPLSN_STTS: // SF missing
                 PCM_GD.lM_Propulsion_Status = new LM_Propulsion_Status(mr);
                 bodyJsonString = gson.toJson(PCM_GD.lM_Propulsion_Status);
                 break;
-            case MSG_CODE_BATTERY_STTS: //SF missing
+            case MSG_CODE_BATTERY_STTS: // SF missing
                 battery_stts BTS = new battery_stts(mr);
                 bodyJsonString = gson.toJson(BTS);
                 break;
-            case MSG_CODE_TX_AHRS: //SF fixed bug
+            case MSG_CODE_TX_AHRS: // SF fixed bug
                 byte[] AHRS_msg_body = MessageBody.GetBytes(lm, msg);
                 MPU_GD.NAVD.Update(AHRS_msg_body);
                 bodyJsonString = gson.toJson(MPU_GD.NAVD);
-                //AHRS_System ahrsSystem = new AHRS_System(mr);
-                //bodyJsonString = gson.toJson(ahrsSystem);
+                // AHRS_System ahrsSystem = new AHRS_System(mr);
+                // bodyJsonString = gson.toJson(ahrsSystem);
                 break;
             case MSG_CODE_UNKNOWN:
             default:
@@ -466,8 +473,8 @@ public class MessageListener implements SerialPortMessageListener {
                 break;
             case MSG_CODE_EO_STTS:
                 MPU_GD.LMCS = new LM_Camera_Status(MR);
-                //byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
-                //ProcessEOMessage(EO_msg_body);
+                // byte[] EO_msg_body = MessageBody.GetBytes(LM, msg);
+                // ProcessEOMessage(EO_msg_body);
                 break;
             case MSG_CODE_WRITE_GET_CNFG_PARAM:
                 config_param CP = new config_param(MR);
