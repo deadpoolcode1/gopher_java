@@ -639,60 +639,66 @@ public class main {
 
     private static void InitSerialCommPorts() {
         comPorts = SerialPort.getCommPorts();
-        nports = Math.min(comPorts.length, 30); // allow up to 10 ports, numbered 0-9
+        nports = Math.min(comPorts.length, 30); // Allow up to 30 ports, numbered 0-29
         String[] port_names = new String[nports];
         MessageListener[] listeners = new MessageListener[nports];
         System.out.println("List of available serial comm ports:");
-        String comPort = "";
+    
         for (int i = 0; i < nports; i++) {
             String portName = comPorts[i].getDescriptivePortName();
+            comPorts[i].allowElevatedPermissionsRequest(); // New call for elevated permissions
+            port_names[i] = comPorts[i].getSystemPortName(); // Use system port name for display and checks
+    
             Pattern pattern = Pattern.compile("COM\\d{1,2}");
             Matcher matcher = pattern.matcher(portName);
             if (matcher.find()) {
-                comPort = matcher.group(); // This will give you "COM16" for the example
-                // Continue with your database query using this comPort value
-            }
-            // Fetch baud rate from the database for the current port
-            int baudRate = getBaudRateForPort(comPort);
-            int dataBits = getDataBitsForPort(comPort);
-            int parity = getParityForPort(comPort);
-            int stopBits = getStopBitsForPort(comPort);
-            if (!(baudRate != -1 && dataBits != -1 && parity != -1 && stopBits != -1)) {
-                System.out.println("Skipping " + comPort + " as it is not configured in the database.");
-                continue;
-            } else {
-                System.out.println("opening " + comPort + " as it is configured in the database.");
-            }
-
-            if (comPorts[i].openPort()) {
+                String comPort = matcher.group(); // This will give you "COM16" for the example
+    
+                // Fetch baud rate, data bits, parity, and stop bits from the database for the current port
+                int baudRate = getBaudRateForPort(comPort);
+                int dataBits = getDataBitsForPort(comPort);
+                int parity = getParityForPort(comPort);
+                int stopBits = getStopBitsForPort(comPort);
+    
+                if (!(baudRate != -1 && dataBits != -1 && parity != -1 && stopBits != -1)) {
+                    System.out.println("Skipping " + comPort + " as it is not configured in the database.");
+                    continue;
+                }
+    
+                boolean openResult = comPorts[i].openPort();
+                if (!openResult) {
+                    System.out.println("Failed opening Serial port #" + i + ", " + comPorts[i].getDescriptivePortName() +
+                            " port name: " + port_names[i] + " | Is port busy? " + comPorts[i].isOpen() + " Last error: " +
+                            comPorts[i].getLastErrorCode() + " Last error location: " + comPorts[i].getLastErrorLocation());
+                    port_names[i] += " - opening error!";
+                    continue;
+                }
+    
                 comPorts[i].setComPortParameters(baudRate, dataBits, stopBits, parity);
                 comPorts[i].setComPortTimeouts(SerialPort.TIMEOUT_NONBLOCKING, 2000, 2000);
                 listeners[i] = new MessageListener(i);
                 comPorts[i].addDataListener(listeners[i]);
-                port_names[i] = comPort;
-                updateTimestampForPort(comPort);
-                System.out.println("Configured serial port #" + i + ", " + comPorts[i].getDescriptivePortName()
-                        + " with baud rate: " + baudRate);
+                System.out.println("Configured serial port #" + i + ", " + comPorts[i].getDescriptivePortName() +
+                        " with baud rate: " + baudRate + ", port name: " + port_names[i]);
+                updateTimestampForPort(comPort); // Updating the timestamp for the opened port
             } else {
-                System.out.println("Failed to open serial port " + portName);
+                System.out.println("Failed to find a valid COM port in the description of " + portName);
+                continue;
             }
         }
+    
+        // Additional GUI or simulation mode logic if applicable
         if (CMN_GD.ATE_SIM_MODE) {
-            // this test program supports up to 2 ports. Manualy Identify the service and
-            // other port
-            // when in GOPHER mode, the port on which each message to the LMDS has to be
-            // sent is commanded by the ATE.
             EventQueue.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    // now let the user select the serial service port and set the other, if any
                     SetSerialPorts setSerialPorts = new SetSerialPorts(frame, "Set the Serial Ports",
                             new Dimension(500, 400), port_names);
                 }
             });
         }
     }
-
+    
     private static void InitLAN_Port() {
         aTE_JPM_LAN = new ATE_JPM_LAN();
         aTE_JPM_LAN.start();
@@ -747,7 +753,7 @@ public class main {
         MB.Add(MT.GetBytes());
         // up to 9 serial comm ports supported (=LAN_PORT_ID-1)
         if (port_ix < comPorts.length) {
-            int return_code = comPorts[port_ix].writeBytes(txbuf, (long) len);
+            int return_code = comPorts[port_ix].writeBytes(txbuf, len);
             if (return_code != len) {
                 System.out.println("Main: Error sending to serial port: " + comPorts[port_ix].getDescriptivePortName()
                         + "  Code=" + return_code);
@@ -792,7 +798,7 @@ public class main {
         MB.Add(MT.GetBytes());
         // up to 9 serial comm ports supported (=LAN_PORT_ID-1)
         if (port_ix < comPorts.length) {
-            int return_code = comPorts[port_ix].writeBytes(txbuf, (long) len);
+            int return_code = comPorts[port_ix].writeBytes(txbuf, len);
             int err_code = 0;
             if (return_code != len) {
                 System.out.println("Main: Error sending to serial port: " + comPorts[port_ix].getDescriptivePortName()
