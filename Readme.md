@@ -139,6 +139,13 @@ run using:
 
 java -jar gopher-1.0-SNAPSHOT-jar-with-dependencies.jar
 
+resolve issue with ip library install:
+
+use cmd
+
+mvn install:install-file -Dfile=C:\Projects\UVision_2\Gopher\gopher_java\IP_Radio_Interface.jar -DgroupId=local -DartifactId=ip-radio-interface -Dversion=1.0 -Dpackaging=jar
+
+
 ## Release notes
 
 ### version 1.20
@@ -177,4 +184,5 @@ Incoming messages are logged to files named after their respective ports.
 Outgoing messages are logged to files named outgoing_lmds<portIx>.txt.
 Important Notes:
 The logging feature is primarily intended for development and testing. Continuous logging in a production environment might impact performance and disk usage.
+
 ```
